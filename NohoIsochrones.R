@@ -1,6 +1,10 @@
 # Noho isochrones
 library(tidyverse)
 library(osmdata)
+# remotes::install_github("GIScience/openrouteservice-r")
+library(openrouteservice)
+library(mapview)
+library(sf)
 noho = getbb("Northampton, Massachusetts")
 streets = noho %>%
   opq() %>%
@@ -11,11 +15,6 @@ small_streets = noho %>%
   opq() %>% 
   add_osm_feature(key = "highway",
                   value = c("residential", "living_street", "unclassified", "service", "footway")) %>% 
-  osmdata_sf()
-water = noho %>% 
-  opq() %>% 
-  add_osm_feature(key = "waterway",
-                  value = "river") %>% 
   osmdata_sf()
 
 # details_cleaned??
@@ -34,10 +33,6 @@ gg1 = details_cleaned %>%
         plot.background = element_rect(fill = "#282828"))
 
 
-# remotes::install_github("GIScience/openrouteservice-r")
-library(openrouteservice)
-library(mapview)
-library(sf)
 
 pie_bar = c(-72.6674863,42.3349417)
 the_roost = c(-72.62826, 42.320975)
@@ -77,8 +72,10 @@ aldrich_walk = ors_isochrones(aldrich_st, range = 45*60, interval = 15*60,
 library(leaflet)
 
 leaflet( ) %>% 
-  addProviderTiles('CartoDB.Positron') %>% 
+ addTiles("http://tiles.mapc.org/basemap/{z}/{x}/{y}.png",
+          attribution='Map tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://www.mass.gov/mgis/">MassGIS</a>.') %>% 
   addPolygons(data=st_geometry(aldrich_bike), weight=1, group='bike',
               color='gray', fillColor='steelblue', fillOpacity=0.1) %>% 
   addPolygons(data=st_geometry(aldrich_walk), weight=1, group='walk',
-              color='green', fillColor='green', fillOpacity=0.1)
+              color='green', fillColor='green', fillOpacity=0.1) %>% 
+  addLayersControl(overlayGroups = c('bike', 'walk'))
