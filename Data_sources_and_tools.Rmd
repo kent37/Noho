@@ -1,0 +1,93 @@
+---
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Tree data sources and tools
+
+### i-Tree
+
+[i-Tree](itreetools.org) is a collection of tools from the US Forest
+service. They are primarily focused on the economic value of trees.
+i-Tree Landscape and i-Tree Canopy have tools which help with evaluating
+tree cover and planning new plantings.
+
+#### OurTrees
+
+[OurTrees](https://ourtrees.itreetools.org/#/) is a tool for assessing
+tree canopy. It gives summary statistics only.
+
+For Northampton, OurTrees estimates 58.68% tree canopy on 12,859 acres
+and 8.61% impervious surfaces over 1,888 acres. The estimate seems to be
+based on the same data as used by i-Tree Landscape.
+
+#### i-Tree Landscape
+
+[i-Tree Landscape](https://landscape.itreetools.org/) helps you explore
+tree canopy, land cover, and demographic information in your community.
+Identify priority planting & protection areas for climate & social
+issues by census block group. The most recent available data is from
+2011.
+
+This tool can be used to interactively look at land cover types on a
+map, or to create a report. A sample report can be viewed
+[here](Reports/i-Tree%20Landscape%20Report.pdf).
+
+#### i-Tree Canopy
+
+[i-Tree Canopy](https://canopy.itreetools.org/) helps you estimate land
+cover and tree canopy plus benefits using random point sampling on
+aerial imagery.
+
+Use this tool to classify land and tree cover across a given area using
+random sampling of aerial imagery. This tool works by selecting random
+points within an area of interest. The user looks at an aerial image at
+that point and classifies the ground cover at the location. By
+classifying many (500-1000) points, an estimate of overall ground cover
+can be calculated.
+
+#### i-Tree data sources
+
+Tree cover, impervious surface and land cover estimates are derived
+directly from 2011 National Land Cover Data (NLCD). These data estimate
+coverage using satellite data with a 30 meter resolution
+([www.mrlc.gov](http://www.mrlc.gov/)). It is believed, based on
+preliminary tests, that the 2011 tree cover maps underestimate tree
+cover. Therefore, the tree cover maps are likely conservative in
+estimating tree cover as well as ecosystem services, which are derived
+from tree cover.
+
+See <https://landscape.itreetools.org/references/maps/> and
+<https://landscape.itreetools.org/references/data/>.
+
+### Multi-Resolution Land Characteristics (MRLC) Consortium
+
+[MRLC](https://www.mrlc.gov/) is a group of federal agencies who coordinate and generate
+consistent and relevant land cover information at the national scale for
+a wide variety of environmental, land management, and modeling
+applications.
+
+MRLC is the source of the National Land Cover Data (NLCD) used by
+i-Tree.
+
+MRLC has its own NLCD viewer at <https://www.mrlc.gov/viewer/> and other
+tools at <https://www.mrlc.gov/tools>
+
+The MRLC NLCD Enhanced Visualization and Analysis (EVA) Tool provides
+users with detailed county statistics for any two NLCD landcover dates
+to support quick and powerful change analyses.
+
+This tool shows changes in land cover at the county level. For example,
+this map shows changes in forest cover from 2001 to 2019:
+<https://www.mrlc.gov/eva/?c=25015&fr=2001&r=county&s=25&t=3&to=2019>
+The associated report says that 4.87 square miles of forest cover were
+lost in this period.
+
+### MassGIS
+
+-   LIDAR data
+    <https://www.mass.gov/info-details/massgis-data-lidar-terrain-data>
+    \### TreeKeeper
+
+### US Forest Service
