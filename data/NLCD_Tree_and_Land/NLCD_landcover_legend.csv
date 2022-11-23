@@ -1,0 +1,98 @@
+# Augmented version of NLCD_landcover_legend_2018_12_17_cE3J3qNGK7bbzFDvKwex.csv,,
+Value,Legend,Class
+0,Unclassified,Unclassified
+1,,
+2,,
+3,,
+4,,
+5,,
+6,,
+7,,
+8,,
+9,,
+10,,
+11,Open Water,Water/Wetland
+12,Perennial Snow/Ice,Other
+13,,
+14,,
+15,,
+16,,
+17,,
+18,,
+19,,
+20,,
+21,"Developed, Open Space",Developed
+22,"Developed, Low Intensity",Developed
+23,"Developed, Medium Intensity",Developed
+24,"Developed, High Intensity",Developed
+25,,
+26,,
+27,,
+28,,
+29,,
+30,,
+31,Barren Land,Other
+32,,
+33,,
+34,,
+35,,
+36,,
+37,,
+38,,
+39,,
+40,,
+41,Deciduous Forest,Forest
+42,Evergreen Forest,Forest
+43,Mixed Forest,Forest
+44,,
+45,,
+46,,
+47,,
+48,,
+49,,
+50,,
+51,,
+52,Shrub/Scrub,Herbaceous/Shrub
+53,,
+54,,
+55,,
+56,,
+57,,
+58,,
+59,,
+60,,
+61,,
+62,,
+63,,
+64,,
+65,,
+66,,
+67,,
+68,,
+69,,
+70,,
+71,Herbaceuous,Herbaceous/Shrub
+72,,
+73,,
+74,,
+75,,
+76,,
+77,,
+78,,
+79,,
+80,,
+81,Hay/Pasture,Cultivated
+82,Cultivated Crops,Cultivated
+83,,
+84,,
+85,,
+86,,
+87,,
+88,,
+89,,
+90,Woody Wetlands,Water/Wetland
+91,,
+92,,
+93,,
+94,,
+95,Emergent Herbaceuous Wetlands,Water/Wetland
