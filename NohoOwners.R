@@ -83,3 +83,20 @@ top_owner_parcels %>%
   leaflet() %>% 
   addProviderTiles('CartoDB.Positron') %>% 
   addPolygons(label=~paste(Owner_1, Owner_2), fillOpacity=0.1, weight=1, color='black')
+
+# Properties controlled by Eric Suher
+suher = parcels %>% 
+  filter(str_detect(Owner_1, 
+        'SUHER|NORTHAMPTON PROPERTIES|NORTHAMPTON INVESTMENTS|47 CENTER ST|BIAPITA|ES 21 CENTER ST|298 MAIN STREET LLC|ES 86 PLEASANT ST|ES 480 PLEASANT ST') 
+         | str_detect(Owner_1, '^ES ')
+         | str_detect(CareOf, 'SUHER')
+         | str_detect(MailAdd1, 'P O BOX 790'))
+
+suher_lots = suher %>% 
+  left_join(lots %>% select(Parcel_ID=PARCEL_ID, geometry)) %>% 
+  st_as_sf()
+
+suher_lots %>% 
+  leaflet() %>% 
+  addProviderTiles('CartoDB.Positron') %>% 
+  addPolygons(label=~StreetAddress, fillOpacity=0.1, weight=1, color='black')
