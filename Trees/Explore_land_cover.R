@@ -49,7 +49,7 @@ NLCD_year_axis = scale_x_continuous(breaks=seq(2001, 2019, 3),
 # Land cover percent by year
 ggplot(lc_counts %>% filter(Name %in% covers_to_include), 
        aes(Year, Fraction, color=Name)) + 
-  geom_line(size=2) +
+  geom_line(linewidth=2) +
   scale_color_manual('Land Cover Class', 
     values=color_map[names(color_map) %in% covers_to_include]) +
   scale_y_continuous('Percent Land Cover', 
@@ -60,7 +60,7 @@ ggplot(lc_counts %>% filter(Name %in% covers_to_include),
 
 # Land cover class percent by year
 ggplot(lc_class_counts, aes(Year, Fraction, color=Class)) + 
-  geom_line(size=2) +
+  geom_line(linewidth=2) +
   scale_color_manual('Land Cover Class',
     values=class_color_map) +
   scale_y_continuous('Percent Land Cover', 
@@ -78,7 +78,7 @@ lc_change = lc_counts %>%
   ungroup()
 
 p = ggplot(lc_change, aes(Year, Change, color=Name)) +
-  geom_line(size=1) +
+  geom_line(linewidth=1) +
   scale_color_manual('Land Cover Class', 
 #   values=color_map[names(color_map) %in% covers_to_include]) +
     values=color_map) +

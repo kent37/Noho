@@ -1,7 +1,7 @@
 <PAMDataset>
   <PAMRasterBand band="1">
     <Description>Layer_1</Description>
-    <GDALRasterAttributeTable Row0Min="0" BinSize="1">
+    <GDALRasterAttributeTable Row0Min="0" BinSize="1" tableType="thematic">
       <FieldDefn index="0">
         <Name>Red</Name>
         <Type>0</Type>
@@ -1820,5 +1820,18 @@
         <F>0</F>
       </Row>
     </GDALRasterAttributeTable>
+    <Metadata>
+      <MDI key="LAYER_TYPE">thematic</MDI>
+      <MDI key="OVERVIEWS_ALGORITHM">IMAGINE Nearest Neighbor Resampling</MDI>
+      <MDI key="STATISTICS_MAXIMUM">12</MDI>
+      <MDI key="STATISTICS_MEAN">1.1473411808889</MDI>
+      <MDI key="STATISTICS_MEDIAN">0</MDI>
+      <MDI key="STATISTICS_MINIMUM">1</MDI>
+      <MDI key="STATISTICS_MODE">0</MDI>
+      <MDI key="STATISTICS_SKIPFACTORX">1</MDI>
+      <MDI key="STATISTICS_SKIPFACTORY">1</MDI>
+      <MDI key="STATISTICS_STDDEV">0.9497460188169</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">100</MDI>
+    </Metadata>
   </PAMRasterBand>
 </PAMDataset>
