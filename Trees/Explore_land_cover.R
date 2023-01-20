@@ -98,7 +98,7 @@ lc_class_change = lc_class_counts %>%
   ungroup()
 
 p = ggplot(lc_class_change, aes(Year, Change, color=Class)) +
-  geom_line(size=1) +
+  geom_line(linewidth=1) +
   scale_color_manual('Land Cover Class',
     values=class_color_map) +
   scale_y_continuous('Change in Land Cover (Acres)') +
