@@ -1,6 +1,5 @@
 # Helpers for working with NLCD data
 
-library(raster) # Before tidyverse to prefer dplyr::select
 library(tidyverse)
 library(plotly)
 library(sf)
@@ -11,37 +10,44 @@ noho = st_read(
   here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'),
   quiet=TRUE)
 
-# Get a reference CRS and transform noho to match
-# Convert to Spatial for compatibility with raster::mask
-noho_sp = local({
+# Get a reference CRS
+nlcd_crs = local({
   ref_path = here::here("data/NLCD_Tree_and_Land/NLCD_2019_Land_Cover_L48_20210604_cE3J3qNGK7bbzFDvKwex.tiff")
-  ref_crs = crs(raster(ref_path))
-  as_Spatial(st_transform(noho, ref_crs))
+  raster::crs(raster::raster(ref_path))
 })
 
+# Transform noho to match NLCD
+# Convert to Spatial for compatibility with raster::mask
+noho_sp = as_Spatial(st_transform(noho, nlcd_crs))
+
 # Read a raster layer and return a tibble with counts of each value
-count_layer = function(path) {
-  clipped = read_layer(path)
-  counts = table(getValues(clipped)) %>% 
+count_layer = function(path, mask_layer=noho_sp) {
+  clipped = read_layer(path, mask_layer)
+  counts = table(raster::getValues(clipped)) %>% 
     as_tibble(.name_repair='universal') %>% 
     rename(value=`...1`)
   counts
 }
   
 # Read a raster layer and clip to NoHo boundary
-read_layer = function(path) {
+read_layer = function(path, mask_layer=noho_sp) {
   rast = raster::raster(path)
-  clipped = raster::mask(rast, noho_sp)
+  clipped = raster::mask(rast, mask_layer)
   clipped
 }
 
 # Make a tibble with land cover values, names and colors
 make_land_cover_legend = function() {
-  # The names are in a CSV file
+  # Classes in the order we want to report them
+  lc_classes = c("Developed",  "Forest", "Cultivated", "Water/Wetland",
+                 "Herbaceous/Shrub", "Other")
+  # The full list is in a CSV file
   lc_names = read_csv(
-    here::here('data/NLCD_Tree_and_Land/NLCD_landcover_legend.csv'),     skip=1,
+    here::here('data/NLCD_Tree_and_Land/NLCD_landcover_legend.csv'), 
+    skip=1,
     show_col_types=FALSE) %>% 
-    filter(!is.na(Legend))
+    filter(!is.na(Legend)) %>% 
+    mutate(Class=factor(Class, levels=lc_classes))
   
   # Colors are in a space-separated file
   colors = read_delim(
