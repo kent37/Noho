@@ -73,3 +73,18 @@ raster_count = 102881 # Number of 30 m^2 raster elements in NoHo
 acre_per_sq_meter = 0.000247105
 acre_per_raster = 900 * acre_per_sq_meter
 noho_acres = raster_count * acre_per_raster
+
+zoning_categories = read_csv(
+  here::here('Trees/Zoning_categories.csv'),
+  show_col_types=FALSE
+)
+aggregated_zoning = function() {
+  zoning = st_read(
+    here::here('Shapefiles/zoning_20220429/zoning_districts_20220429.shp'),
+    quiet=TRUE
+  ) %>% st_transform(nlcd_crs) %>% 
+    select(NAME) %>% 
+    mutate(Class=deframe(zoning_categories)[NAME]) %>% 
+    group_by(Class) %>% 
+    summarize()
+}

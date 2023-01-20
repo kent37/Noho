@@ -213,6 +213,114 @@ acreage, not the change in percent of total acres.
 acres_table(noho_classes, 'Northampton')
 ```
 
+### Land cover by zoning category
+
+These tabs show land cover by zoning category. The categories
+aggregate the City zoning districts.
+
+```{r tab_setup}
+class_zone_list = function(class) {
+  zoning_categories %>% 
+    filter(Category==class) %>% 
+    pull(Zone) %>% 
+    str_flatten_comma(last=' and ')
+}
+
+zoning = aggregated_zoning()
+```
+
+::: {.panel-tabset}
+
+### Rural
+
+Rural zones include zoning districts
+`r class_zone_list('Rural')`.
+
+```{r rural, results='asis'}
+class='Rural'
+zone_sp = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone_sp)
+plot_change_in_acres(zone_classes, class_text)
+
+sankey_plot(zone_sp, class_text)
+
+acres_table(zone_classes, class_text)
+```
+
+
+### Suburban residential
+
+Suburban residential includes zoning districts
+`r class_zone_list('Suburban/Water supply')`.
+
+```{r suburban, results='asis'}
+class='Suburban/Water supply'
+zone_sp = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone_sp)
+plot_change_in_acres(zone_classes, class_text)
+
+sankey_plot(zone_sp, class_text)
+
+acres_table(zone_classes, class_text)
+```
+
+### Urban residential
+
+Urban residential includes zoning districts
+`r class_zone_list('Urban')`.
+
+```{r urban, results='asis'}
+class='Urban'
+zone_sp = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone_sp)
+plot_change_in_acres(zone_classes, class_text)
+
+sankey_plot(zone_sp, class_text)
+
+acres_table(zone_classes, class_text)
+```
+
+### Business / Industrial
+
+Business/industrial includes zoning districts
+`r class_zone_list('Business/industrial')`.
+
+```{r Business_industrial, results='asis'}
+class='Business/industrial'
+zone_sp = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone_sp)
+plot_change_in_acres(zone_classes, class_text)
+
+sankey_plot(zone_sp, class_text)
+
+acres_table(zone_classes, class_text)
+```
+### Central business districts
+
+Central business zones include zoning districts
+`r class_zone_list('Central business')`.
+
+These zones consist entirely of developed land; there is no
+change between 2001 and 2019.
+
+:::
+
 #### Land cover classes
 
 For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. 
