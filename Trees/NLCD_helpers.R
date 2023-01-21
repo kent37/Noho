@@ -1,6 +1,7 @@
 # Helpers for working with NLCD data
 
 library(tidyverse)
+library(leaflet)
 library(plotly)
 library(sf)
 library(sp)
@@ -87,4 +88,35 @@ aggregated_zoning = function() {
     mutate(Class=deframe(zoning_categories)[NAME]) %>% 
     group_by(Class) %>% 
     summarize()
+}
+
+# Make a map showing forest loss within a specific zoning region
+map_forest_loss = function(lost_forest_poly, region=NULL) {
+  lost = lost_forest_poly %>% st_transform(4326)
+  overlay_groups = 'Forest loss'
+
+  if (!is.null(region)) {
+    # Show loss only within region and convert to EPSG:4326
+    region_name = paste(region, ' zone')
+    region = zoning %>% filter(Class==region) %>% st_transform(4326)
+    lost = st_intersection( lost, region)
+    overlay_groups = c(region_name, overlay_groups)
+  }
+  
+  map = leaflet(width='95%', height='600px') %>% 
+    setView(-72.667, 42.330, 12) %>% 
+    addProviderTiles('CartoDB.Positron')
+  
+  if (!is.null(region))
+      map = map %>% 
+        addPolygons(data=region, stroke=FALSE, group=region_name,
+                fillColor='lightgray', fillOpacity=0.5)
+      
+  map %>%
+    addPolygons(data=lost, stroke=FALSE, group='Forest loss',
+                fillColor='red', fillOpacity=0.8) %>% 
+    addPolygons(data=noho %>% st_transform(4326),
+                weight=1, fill=FALSE, color='grey') %>% 
+    addLayersControl(overlayGroups=overlay_groups,
+                     options=layersControlOptions(collapsed=FALSE))
 }

@@ -7,6 +7,7 @@ format:
   html:
     embed-resources: true
     header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+theme: flatly
 execute:
   echo: false
   message: false
@@ -43,6 +44,9 @@ lc_layers =
   map(set_names(lc_files, basename(lc_files)), 
           ~raster::raster(.x) %>% raster::disaggregate(res_bump), 
           .progress='Reading layers')
+
+lost_forest_poly = st_read(here::here('Trees/Lost_forest_2001_2019.gpkg'),
+                           quiet=TRUE)
 
 ```
 
@@ -213,10 +217,20 @@ acreage, not the change in percent of total acres.
 acres_table(noho_classes, 'Northampton')
 ```
 
+Red areas in the map below show where the land cover classification
+changed from forest in 2001 to something other than forest in 2019.
+
+```{r noho_map}
+map_forest_loss(lost_forest_poly)
+```
+
 ### Land cover by zoning category
 
-These tabs show land cover by zoning category. The categories
-aggregate the City zoning districts.
+These tabs show land cover change within zoning categories. 
+The categories aggregate the City zoning districts.
+
+The maps show the zoning districts in grey and the areas
+of lost forest cover in red.
 
 ```{r tab_setup}
 class_zone_list = function(class) {
@@ -251,6 +265,10 @@ sankey_plot(zone_sp, class_text)
 acres_table(zone_classes, class_text)
 ```
 
+```{r rural_map}
+map_forest_loss(lost_forest_poly, 'Rural')
+```
+
 
 ### Suburban residential
 
@@ -270,6 +288,10 @@ plot_change_in_acres(zone_classes, class_text)
 sankey_plot(zone_sp, class_text)
 
 acres_table(zone_classes, class_text)
+```
+
+```{r suburban_map}
+map_forest_loss(lost_forest_poly, 'Suburban/Water supply')
 ```
 
 ### Urban residential
@@ -292,6 +314,10 @@ sankey_plot(zone_sp, class_text)
 acres_table(zone_classes, class_text)
 ```
 
+```{r urban_map}
+map_forest_loss(lost_forest_poly, 'Urban')
+```
+
 ### Business / Industrial
 
 Business/industrial includes zoning districts
@@ -311,6 +337,11 @@ sankey_plot(zone_sp, class_text)
 
 acres_table(zone_classes, class_text)
 ```
+
+```{r business_industrial_map}
+map_forest_loss(lost_forest_poly, 'Business/industrial')
+```
+
 ### Central business districts
 
 Central business zones include zoning districts

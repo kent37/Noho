@@ -37,3 +37,15 @@ ggplot(data,
   labs(x = NULL, title='Change in Northampton land cover, 2001-2019',
        subtitle='Showing changes only',
        caption='Data: mlrc.gov | Analysis: Kent Johnson')
+
+# Make a polygon layer with areas that were forested in 2001
+# and not in 2019
+forest_values = 41:43
+lost_forest = (lc_2001==41|lc_2001==42|lc_2001==43) & lc_2019!=41 & lc_2019!=42 & lc_2019!=43
+
+lost_forest[lost_forest==0] = NA
+lost_forest_poly = raster::rasterToPolygons(lost_forest, dissolve=FALSE)
+lost_forest_poly = st_union(st_as_sf(lost_forest_poly))
+lost_forest_poly = st_transform(lost_forest_poly, st_crs(noho)) # Mass state plane
+
+st_write(st_sf(lost_forest_poly), here::here('Trees/Lost_forest_2001_2019.gpkg'), delete_layer=TRUE)
