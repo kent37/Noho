@@ -7,7 +7,6 @@ format:
   html:
     embed-resources: true
     header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
-theme: flatly
 execute:
   echo: false
   message: false
@@ -370,3 +369,9 @@ legend %>%
     data_row.padding='4px',
     table_body.hlines.width=0) 
 ```
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>
