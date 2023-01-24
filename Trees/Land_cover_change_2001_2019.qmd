@@ -216,8 +216,9 @@ acreage, not the change in percent of total acres.
 acres_table(noho_classes, 'Northampton')
 ```
 
-Red areas in the map below show where the land cover classification
-changed from forest in 2001 to something other than forest in 2019.
+The map below show where the land cover classification
+changed from forest in 2001 to something other than forest in 2019. 
+The changed areas are colored to show the 2019 classification.
 
 ```{r noho_map}
 map_forest_loss(lost_forest_poly)

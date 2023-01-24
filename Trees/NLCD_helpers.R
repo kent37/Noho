@@ -95,6 +95,11 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
   lost = lost_forest_poly %>% st_transform(4326)
   overlay_groups = 'Forest loss'
 
+  # Generate colors and figure out what should be in the legend
+  lost$Color = unname(class_color_map[as.character(lost$Class)])
+  legend_labels = sort(unique(as.character(lost$Class)))
+  legend_colors = class_color_map[legend_labels]
+  
   if (!is.null(region)) {
     # Show loss only within region and convert to EPSG:4326
     region_name = paste(region, ' zone')
@@ -114,9 +119,13 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
       
   map %>%
     addPolygons(data=lost, stroke=FALSE, group='Forest loss',
-                fillColor='red', fillOpacity=0.8) %>% 
+                fillColor=~Color,
+                fillOpacity=0.8,
+                label=~Class) %>% 
     addPolygons(data=noho %>% st_transform(4326),
                 weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(overlayGroups=overlay_groups,
-                     options=layersControlOptions(collapsed=FALSE))
+                     options=layersControlOptions(collapsed=FALSE)) %>% 
+    addLegend(colors=legend_colors, labels=legend_labels,
+              title='2019 land use')
 }

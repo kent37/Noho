@@ -44,8 +44,16 @@ forest_values = 41:43
 lost_forest = (lc_2001==41|lc_2001==42|lc_2001==43) & lc_2019!=41 & lc_2019!=42 & lc_2019!=43
 
 lost_forest[lost_forest==0] = NA
-lost_forest_poly = raster::rasterToPolygons(lost_forest, dissolve=FALSE)
-lost_forest_poly = st_union(st_as_sf(lost_forest_poly))
+was_forest = raster::mask(lc_2019, lost_forest)
+lost_forest_poly = 
+  raster::rasterToPolygons(was_forest, dissolve=FALSE) %>% 
+  st_as_sf() %>% 
+  group_by(Red) %>% 
+  summarize() %>% 
+  st_union(by_feature=TRUE) %>% 
+  mutate(Class=class_lookup[as.character(Red)]) %>% 
+  select(-Red)
+
 lost_forest_poly = st_transform(lost_forest_poly, st_crs(noho)) # Mass state plane
 
 st_write(st_sf(lost_forest_poly), here::here('Trees/Lost_forest_2001_2019.gpkg'), delete_layer=TRUE)
