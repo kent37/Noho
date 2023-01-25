@@ -110,7 +110,9 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
   
   map = leaflet(width='95%', height='600px') %>% 
     setView(-72.667, 42.330, 12) %>% 
-    addProviderTiles('CartoDB.Positron')
+    addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+    addTiles(group='OpenStreetMap') %>% 
+    addProviderTiles('Esri.WorldImagery', group='Satellite')
   
   if (!is.null(region))
       map = map %>% 
@@ -124,8 +126,10 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
                 label=~Class) %>% 
     addPolygons(data=noho %>% st_transform(4326),
                 weight=1, fill=FALSE, color='grey') %>% 
-    addLayersControl(overlayGroups=overlay_groups,
-                     options=layersControlOptions(collapsed=FALSE)) %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups=overlay_groups,
+      options=layersControlOptions(collapsed=FALSE)) %>% 
     addLegend(colors=legend_colors, labels=legend_labels,
               title='2019 land use')
 }
