@@ -105,8 +105,8 @@ p = ggplot(lc_change, aes(Year, Change, color=Class)) +
 ggplotly(p)
 }
 
-# Sankey chart
-sankey_plot = function(mask, where) {
+# Get detailed change data for sankey chart and from/to table
+compute_change = function(mask) {
   lc_change = 
     tibble(`2001`=raster::getValues(lc_layers[[1]] %>%
                                       raster::mask(mask)),
@@ -116,7 +116,29 @@ sankey_plot = function(mask, where) {
     mutate(`2001`=class_lookup[as.character(`2001`)],
            `2019`=class_lookup[as.character(`2019`)]) %>% 
     count(`2001`, `2019`, sort=TRUE) %>% 
-    mutate(Acres = acre_per_raster * n)
+    mutate(Acres = acre_per_raster * n / res_bump^2)
+
+  lc_change  
+}
+
+# Nice from/to table
+change_table = function(lc_change, where) {
+  lc_change %>% 
+    filter(`2001` != `2019`) %>% 
+    mutate(Acres=round(Acres, 0)) %>% 
+    select(-n) %>% 
+    pivot_wider(names_from='2019', values_from='Acres', values_fill=0) %>% 
+    #janitor::adorn_totals(where=c('row', 'col')) %>% 
+    rename(`2001 Category`='2001') %>% 
+    gt() %>% 
+    tab_header(title=str_glue('Land cover change in {where}, 2001-2019'),
+               subtitle='Change in acres from 2001 land cover category to 2019 category') %>% 
+    tab_spanner('2019 Category', columns=-1) %>% 
+    tab_source_note(table_caption)
+}
+
+# Sankey chart based on computed changes
+sankey_plot = function(lc_change, where) {
   
   data = lc_change %>% 
     filter(`2001` != `2019`) %>% 
@@ -198,14 +220,24 @@ The second chart gives more detail on the changes.
 The first chart, above, gives the impression that forest land has
 been developed and cultivated land has gone to herbaceous and shrub.
 
-The chart below gives a more nuanced view. It shows that some forest
-land has become herbaceous/shrub and most of the lost cultivated
-land has been developed.
+The sankey diagram below gives a more nuanced view, showing the "from" and 
+"to" flow of land cover change. It shows that some of the loss of forest
+land is due to development, but some forest land has changed to herbaceous/shrub.
+Most of the lost cultivated land has been developed but small amounts changed
+to forest and herbaceous/shrub.
 
 ```{r noho_chart2}
-sankey_plot(noho_sp, 'Northampton')
+change_data = compute_change(noho_sp)
+sankey_plot(change_data, 'Northampton')
 ```
 
+This table shows the numbers underlying the sankey diagram above. For example,
+for acres that were forested in 2001 and not it 2019, it shows the number of
+acres for each new classification.
+
+```{r}
+change_table(change_data, 'Northampton')
+```
 
 This table shows land cover for the City in acres and as a percent of
 total area, and the change in acreage from 2001 to 2019. 
@@ -260,7 +292,10 @@ class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
 plot_change_in_acres(zone_classes, class_text)
 
-sankey_plot(zone_sp, class_text)
+change_data = compute_change(zone_sp)
+sankey_plot(change_data, class_text)
+
+change_table(change_data, class_text)
 
 acres_table(zone_classes, class_text)
 ```
@@ -285,7 +320,10 @@ class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
 plot_change_in_acres(zone_classes, class_text)
 
-sankey_plot(zone_sp, class_text)
+change_data = compute_change(zone_sp)
+sankey_plot(change_data, class_text)
+
+change_table(change_data, class_text)
 
 acres_table(zone_classes, class_text)
 ```
@@ -309,7 +347,10 @@ class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
 plot_change_in_acres(zone_classes, class_text)
 
-sankey_plot(zone_sp, class_text)
+change_data = compute_change(zone_sp)
+sankey_plot(change_data, class_text)
+
+change_table(change_data, class_text)
 
 acres_table(zone_classes, class_text)
 ```
@@ -333,7 +374,10 @@ class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
 plot_change_in_acres(zone_classes, class_text)
 
-sankey_plot(zone_sp, class_text)
+change_data = compute_change(zone_sp)
+sankey_plot(change_data, class_text)
+
+change_table(change_data, class_text)
 
 acres_table(zone_classes, class_text)
 ```
