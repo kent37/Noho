@@ -7,6 +7,7 @@ format:
   html:
     embed-resources: true
     header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+    link-external-newwindow: true
 execute:
   echo: false
   message: false
@@ -216,13 +217,13 @@ noho_classes = clip_and_count_all(noho_sp)
 plot_change_in_acres(noho_classes, 'Northampton')
 ```
 
-The second chart gives more detail on the changes. 
-The first chart, above, gives the impression that forest land has
+The chart above gives the impression that forest land has
 been developed and cultivated land has gone to herbaceous and shrub.
+The actual situation is not that simple.
 
 The sankey diagram below gives a more nuanced view, showing the "from" and 
-"to" flow of land cover change. It shows that some of the loss of forest
-land is due to development, but some forest land has changed to herbaceous/shrub.
+"to" flow of land cover change. It shows that some loss of forest
+land is due to development, but some forest land has also changed to herbaceous/shrub.
 Most of the lost cultivated land has been developed but small amounts changed
 to forest and herbaceous/shrub.
 
@@ -232,7 +233,7 @@ sankey_plot(change_data, 'Northampton')
 ```
 
 This table shows the numbers underlying the sankey diagram above. For example,
-for acres that were forested in 2001 and not it 2019, it shows the number of
+for acres that changed classification from 2001 to 2019, it shows the number of
 acres for each new classification.
 
 ```{r}
@@ -255,6 +256,8 @@ The changed areas are colored to show the 2019 classification.
 ```{r noho_map}
 map_forest_loss(lost_forest_poly)
 ```
+
+---
 
 ### Land cover by zoning category
 
