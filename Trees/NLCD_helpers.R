@@ -21,20 +21,38 @@ nlcd_crs = local({
 # Convert to Spatial for compatibility with raster::mask
 noho_sp = as_Spatial(st_transform(noho, nlcd_crs))
 
-# Read a raster layer and return a tibble with counts of each value
-count_layer = function(path, mask_layer=noho_sp) {
-  clipped = read_layer(path, mask_layer)
-  counts = table(raster::getValues(clipped)) %>% 
-    as_tibble(.name_repair='universal') %>% 
-    rename(value=`...1`)
-  counts
-}
-  
 # Read a raster layer and clip to NoHo boundary
 read_layer = function(path, mask_layer=noho_sp) {
   rast = raster::raster(path)
   clipped = raster::mask(rast, mask_layer)
   clipped
+}
+
+# Clip all layers to a mask and summarize yearly class counts
+clip_and_count_all = function(mask) {
+  lc_counts = 
+    map_dfr(lc_layers, 
+        ~clip_and_count_layer(.x, mask),
+        .id='path', .progress='Clipping')
+
+  lc_counts %>% 
+    mutate(Class = class_lookup[value],
+           Year = as.integer(str_extract(path, '\\d{4}'))) %>% 
+    select(-path, -value) %>% 
+    group_by(Year, Class) %>% 
+    summarize(n=sum(n), .groups='drop_last') %>% 
+    mutate(Fraction=n/sum(n),
+           Acres=n * acre_per_raster / res_bump^2) %>% 
+    ungroup()
+}
+
+# Clip a single layer to a mask and report the category counts
+clip_and_count_layer = function(rast, mask) {
+  clipped = raster::mask(rast, mask)
+  counts = table(raster::getValues(clipped)) %>% 
+    as_tibble(.name_repair='universal') %>% 
+    rename(value=`...1`)
+  counts
 }
 
 # Make a tibble with land cover values, names and colors
@@ -133,3 +151,6 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
     addLegend(colors=legend_colors, labels=legend_labels,
               title='2019 land use')
 }
+
+# Format as percent with no decimal
+int_pct = function(val) scales::percent(val, accuracy=1)

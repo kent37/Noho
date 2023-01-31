@@ -51,36 +51,6 @@ lost_forest_poly = st_read(here::here('Trees/Lost_forest_2001_2019.gpkg'),
 ```
 
 ```{r helpers}
-# Clip all layers to a mask and summarize yearly class counts
-clip_and_count_all = function(mask) {
-  lc_counts = 
-    map_dfr(lc_layers, 
-        ~clip_and_count_layer(.x, mask),
-        .id='path', .progress='Clipping')
-
-  lc_counts %>% 
-    mutate(Class = class_lookup[value],
-           Year = as.integer(str_extract(path, '\\d{4}'))) %>% 
-    select(-path, -value) %>% 
-    group_by(Year, Class) %>% 
-    summarize(n=sum(n), .groups='drop_last') %>% 
-    mutate(Fraction=n/sum(n),
-           Acres=n * acre_per_raster / res_bump^2) %>% 
-    ungroup()
-}
-
-# Clip a single layer to a mask and report the category counts
-clip_and_count_layer = function(rast, mask) {
-  clipped = raster::mask(rast, mask)
-  counts = table(raster::getValues(clipped)) %>% 
-    as_tibble(.name_repair='universal') %>% 
-    rename(value=`...1`)
-  counts
-}
-
-# Format as percent with no decimal
-int_pct = function(val) scales::percent(val, accuracy=1)
-
 # Plot helpers
 theme_set(theme_minimal(base_size=12) + theme(legend.position='bottom'))
 NLCD_year_axis = scale_x_continuous(breaks=seq(2001, 2019, 3),
