@@ -36,7 +36,7 @@ clip_and_count_all = function(mask) {
         .id='path', .progress='Clipping')
 
   lc_counts %>% 
-    mutate(Class = class_lookup[value],
+    mutate(Class = class_lookup[as.character(value)],
            Year = as.integer(str_extract(path, '\\d{4}'))) %>% 
     select(-path, -value) %>% 
     group_by(Year, Class) %>% 
@@ -47,7 +47,19 @@ clip_and_count_all = function(mask) {
 }
 
 # Clip a single layer to a mask and report the category counts
+# Very fast version using exactextractr::exact_extract
 clip_and_count_layer = function(rast, mask) {
+  exactextractr::exact_extract(rast, mask, function(df) {
+    # df has columns `value` and `coverage_fraction` 
+    # with one row per raster cell
+    df %>%
+      group_by(value) %>%
+      summarize(n = sum(coverage_fraction))
+  }, summarize_df = TRUE, progress = FALSE)
+}
+
+# Slower version using raster::mask
+clip_and_count_layer_slow = function(rast, mask) {
   clipped = raster::mask(rast, mask)
   counts = table(raster::getValues(clipped)) %>% 
     as_tibble(.name_repair='universal') %>% 
