@@ -2,9 +2,9 @@ library(tidyverse)
 library(sf)
 library(leaflet)
 
-path = '/Users/kent/Dev/Noho/Shapefiles/lots_20190816/lots_20190816.shp'
-
 # From https://northamptonma.gov/932/Make-Maps-flooding-etc
+path = here::here('Shapefiles/lots_20190816/lots_20190816.shp')
+
 lots = st_read(path) %>% 
   st_transform(4326) %>% 
   mutate(Owner2 = if_else(is.na(Owner2), '', Owner2))
