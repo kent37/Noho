@@ -69,7 +69,8 @@ a wide variety of environmental, land management, and modeling
 applications.
 
 MRLC is the source of the National Land Cover Data (NLCD) used by
-i-Tree.
+i-Tree. 
+Level II & I Overall accuracy (OA) of NLCD2016 land cover (LC) was 86.4% & 90.6%.
 
 MRLC has its own NLCD viewer at <https://www.mrlc.gov/viewer/> and other
 tools at <https://www.mrlc.gov/tools>
@@ -83,6 +84,24 @@ this map shows changes in forest cover from 2001 to 2019:
 <https://www.mrlc.gov/eva/?c=25015&fr=2001&r=county&s=25&t=3&to=2019>
 The associated report says that 4.87 square miles of forest cover were
 lost in this period.
+
+### ESA WorldCover
+
+https://esa-worldcover.org/en
+
+Land cover data at 10m resolution. Data for 2020 and 2021. 
+Due to changes in the analysis algorithm, the two data sets are not
+entirely comparable. The docs say, 
+"most changes between both maps are due to changes in the used algorithms."
+
+Does not show roads as "Built up" ! Overall accuracy for North America
+is 74.6 +/- 1.2.
+
+### Copernicus Global Land Cover
+
+https://lcviewer.vito.be/about
+
+Global land cover at 100m resolution. Data for 2015-2019.
 
 ### MassGIS
 
