@@ -72,7 +72,6 @@ Of these, `r comma(sum(!planted$dead))` (`r int_pct(mean(!planted$dead))`)
 have survived to date and 
 `r sum(planted$dead)` (`r int_pct(mean(planted$dead))`) have been removed.
 
-
 ## Yearly planting and removal
 
 This table and chart show planting and removals by planting year.
@@ -113,7 +112,7 @@ ggplot(aes(Year, value, fill=name)) +
        caption=source_text)
 ```
 
-## Top species
+## Top species planted
 
 ```{r yearly_species}
 top_x_counts = function(col) {
@@ -185,7 +184,44 @@ top_x_table(counts, 'species')
 top_x_chart(counts, 'species')
 ```
 
-## Top genera
+## Survival by species
+
+```{r survival}
+top_species = planted %>% 
+  count(Species, sort=TRUE) %>% 
+  pull(Species) %>% head(10)
+
+survival = planted |> 
+  filter(Species %in% top_species) |> 
+  group_by(Species) |> 
+  summarize(Total=n(),
+            Removed_Pct=int_pct(mean(dead)), 
+            Removed_Count=sum(dead),
+            pct = mean(!dead),
+            Remaining_Pct=int_pct(pct),
+            Remaining_Count=sum(!dead)) |> 
+  arrange(desc(pct)) |> 
+  select(-pct)
+
+gt(survival) %>% 
+  tab_header(title=str_glue('Species planted and survived 2015-2022'),
+             subtitle=str_glue('Top ten species overall')) %>% 
+  tab_spanner_delim('_', columns=3:6) |> 
+  tree_table_options()
+
+survival |> 
+  select(Species, Remaining=Remaining_Count, Removed=Removed_Count) |> 
+  mutate(Species=factor(Species, levels=Species)) |> 
+  pivot_longer(cols=Remaining:Removed) |> 
+  ggplot(aes(Species, value, fill=name)) +
+    geom_col() +
+    scale_fill_manual('', values = survival_colors) +
+    labs(title='Top species planted and subsequently removed 2015-2022',
+         y='Number of trees planted',
+         caption=source_text)
+```
+
+## Top genera planted
 
 ```{r yearly_genera}
 counts = top_x_counts(Genus)
@@ -193,7 +229,7 @@ top_x_table(counts, 'genera')
 top_x_chart(counts, 'genera')
 ```
 
-## Top families
+## Top families planted
 
 ```{r yearly_families}
 counts = top_x_counts(Family)
