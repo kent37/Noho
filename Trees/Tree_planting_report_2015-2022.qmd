@@ -23,6 +23,7 @@ table.gt_table {
 ```{r libraries, include=FALSE}
 library(tidyverse)
 library(gt)
+library(leaflet)
 library(lubridate)
 library(scales)
 library(sf)
@@ -284,3 +285,48 @@ ggplot(aes(Year, value, fill=name)) +
   labs(y='Number of trees planted',
        caption=source_text)
 ```
+
+## Planting map
+
+This map shows the approximate locations of the `r comma(sum(!planted$dead))`
+surviving trees.
+
+:::{.column-page}
+
+```{r map}
+locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 
+  st_transform(crs=4326) |> 
+  select(Num, Street=Street_orig, Ward)
+
+summarize_names = function(common_names) {
+  tibble(names=str_to_title(common_names)) |> 
+    count(names, sort=TRUE) |> 
+    mutate(label=paste(n, names)) |> 
+    pull(label) |> 
+    paste(collapse='<br>')
+}
+
+map_data = planted |> 
+  filter(!dead) |> 
+  group_by(Num, Street, Ward) |> 
+  summarize(count=n(),
+            name_label=summarize_names(`Common Name`),
+            .groups='drop'
+  ) |> 
+  mutate(address=str_to_title(if_else(is.na(Num), Street, paste(Num, Street))),
+         label=paste0(address, ' (', count, ' trees)<br><br>', name_label) |> 
+           lapply(htmltools::HTML) |> unname())
+
+map_data = inner_join(map_data, locations) |> 
+  st_as_sf()
+
+leaflet(width='800px', height='700px') |> 
+  setView(-72.667, 42.330, 12) |> 
+  addTiles("http://tiles.mapc.org/basemap/{z}/{x}/{y}.png",
+          attribution='Map tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://www.mass.gov/mgis/">MassGIS</a>.') |> 
+  addCircleMarkers(data=map_data, radius=~5+sqrt(count), label=~label,
+                   stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5)
+
+```
+
+:::
