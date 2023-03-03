@@ -142,6 +142,7 @@ acres_table = function(lc_classes, where) {
                 values_from=c(Acres, Percent),
                 names_glue='{Year}_{.value}',
                 names_vary='slowest') %>% 
+    arrange(desc(`2019_Acres`)) |> 
     mutate(
       Change_Acres=`2019_Acres`-`2001_Acres`,
       `Percent Change`=int_pct(Change_Acres/`2001_Acres`)) %>% 
@@ -151,7 +152,6 @@ acres_table = function(lc_classes, where) {
     tab_header(title=str_glue('Land Cover Acres in {where}, 2001-2019')) %>% 
     tab_source_note(table_caption) %>%
     opt_row_striping()
-
 }
 
 ```
@@ -162,7 +162,7 @@ This report uses data from the National Land Coverage Database (NLCD)
 to summarize land cover changes in Northampton, Mass. from
 2001 to 2019. 
 
-The NLCD provides data on land cover and land cover change at a 30 meter resolution.
+The NLCD provides data on land cover and land cover change at 30 meter resolution.
 Each 30m square is classified into one of 16 land coverage categories. 
 Data releases every three years, from 2001 to 2019, allow monitoring land cover changes at the resolution of the data.
 
@@ -173,17 +173,36 @@ The NLCD data is available from the
 An interactive viewer for the underlying data is available
 [here](https://www.mrlc.gov/viewer).
 
-### Land cover change in Northampton
+### Land cover in Northampton
 
 These tables and charts show land cover change for the City as a whole.
 
-The first chart shows land cover change since 2001. There has been
-substantial increase in developed land and decrease in forested land.
-There are has also been a loss of cultivated land and an increase in 
+#### Land cover totals
+
+The first table shows land cover for the City in acres and as a percent of
+total area, and the change in acreage from 2001 to 2019. 
+The "Percent change" column is the change in acreage as a percent of 
+acreage, not the change in percent of total acres.
+
+Northampton is nearly half forested land and more than one quarter 
+developed land. The changes is forested and developed land are relatively
+small compared to the total number of acres.
+
+```{r noho_table}
+noho_classes = clip_and_count_all(noho_sp)
+acres_table(noho_classes, 'Northampton')
+```
+
+#### Land cover change
+
+This chart shows land cover change in acres since 2001.
+
+- Developed land has increased by 208 acres.
+- Forested land has decreased by 181 acres.
+- There has been a loss of cultivated land and an increase in 
 herbaceous and shrub land.
 
 ```{r noho_chart}
-noho_classes = clip_and_count_all(noho_sp)
 plot_change_in_acres(noho_classes, 'Northampton')
 ```
 
@@ -202,21 +221,12 @@ change_data = compute_change(noho_sp)
 sankey_plot(change_data, 'Northampton')
 ```
 
-This table shows the numbers underlying the sankey diagram above. For example,
-for acres that changed classification from 2001 to 2019, it shows the number of
+This table shows the numbers underlying the right side of the sankey diagram above.
+For acres that changed classification from 2001 to 2019, it shows the number of
 acres for each new classification.
 
 ```{r}
 change_table(change_data, 'Northampton')
-```
-
-This table shows land cover for the City in acres and as a percent of
-total area, and the change in acreage from 2001 to 2019. 
-The "Percent change" column is the change in acreage as a percent of 
-acreage, not the change in percent of total acres.
-
-```{r noho_table}
-acres_table(noho_classes, 'Northampton')
 ```
 
 The map below show where the land cover classification
@@ -263,14 +273,14 @@ zone_sp = zoning %>%
 
 class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
+
+acres_table(zone_classes, class_text)
 plot_change_in_acres(zone_classes, class_text)
 
 change_data = compute_change(zone_sp)
 sankey_plot(change_data, class_text)
 
 change_table(change_data, class_text)
-
-acres_table(zone_classes, class_text)
 ```
 
 ```{r rural_map}
@@ -291,14 +301,14 @@ zone_sp = zoning %>%
 
 class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
+
+acres_table(zone_classes, class_text)
 plot_change_in_acres(zone_classes, class_text)
 
 change_data = compute_change(zone_sp)
 sankey_plot(change_data, class_text)
 
 change_table(change_data, class_text)
-
-acres_table(zone_classes, class_text)
 ```
 
 ```{r suburban_map}
@@ -318,14 +328,14 @@ zone_sp = zoning %>%
 
 class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
+
+acres_table(zone_classes, class_text)
 plot_change_in_acres(zone_classes, class_text)
 
 change_data = compute_change(zone_sp)
 sankey_plot(change_data, class_text)
 
 change_table(change_data, class_text)
-
-acres_table(zone_classes, class_text)
 ```
 
 ```{r urban_map}
@@ -345,14 +355,14 @@ zone_sp = zoning %>%
 
 class_text = paste(class, 'zones')
 zone_classes = clip_and_count_all(zone_sp)
+
+acres_table(zone_classes, class_text)
 plot_change_in_acres(zone_classes, class_text)
 
 change_data = compute_change(zone_sp)
 sankey_plot(change_data, class_text)
 
 change_table(change_data, class_text)
-
-acres_table(zone_classes, class_text)
 ```
 
 ```{r business_industrial_map}
@@ -374,6 +384,8 @@ change between 2001 and 2019.
 For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. 
 This table shows the land cover categories in the NLCD and the 
 consolidated classes to which they have been assigned.
+Detailed descriptions of the NLCD categories are available
+[here](https://www.mrlc.gov/data/legends/national-land-cover-database-class-legend-and-description).
 
 ```{r categories}
 legend %>% 
