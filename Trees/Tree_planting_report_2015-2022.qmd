@@ -239,7 +239,92 @@ top_x_table(counts, 'families')
 top_x_chart(counts, 'families')
 ```
 
-## Planting location
+## Planting by ward
+
+This table summarizes the number of trees planted by ward.
+
+```{r by_ward}
+by_ward = planted |> 
+  count(Year, Ward) |> 
+  pivot_wider(names_from='Ward', values_from='n', values_fill=0) |> 
+  rename(Unknown=`NA`) |> 
+  mutate(Year=as.character(Year))
+
+by_ward |> 
+  bind_rows(summarize(by_ward, across(-Year, sum)) |> 
+              mutate(Year='Total')) |> 
+  gt() |> 
+  tab_spanner('Ward', 2:9) |> 
+  tab_header(title='Trees planted by ward') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+## Planting in Environmental Justice communities
+
+```{r ej}
+ej = read_sf('~/Dev/ej2020/ej2020_gdb.zip') |> 
+  filter(MUNICIPALITY=='Northampton') |> 
+  st_transform(crs=4326)
+
+planting_locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 
+  st_transform(crs=4326) |> 
+  select(Num, Street=Street_orig, Ward)
+
+ej_locations = planting_locations[ej,] |> 
+  st_drop_geometry()
+
+ej_planting = planted |> 
+  filter(!dead) |> 
+  inner_join(ej_locations) |> 
+  count(Year, name='Count') |> 
+  mutate(Year=as.character(Year))
+```
+
+Northampton includes seven 2020 Census block groups which are
+classified as Environmental Justice populations -
+four with substantial minority populations and
+three with both minority and low-income populations.
+
+This table shows the number of trees planted each year in Environmental
+Justice communities of Northampton.
+
+```{r ej_table}
+ej_planting |> 
+  bind_rows(tibble(Year='Total', Count=sum(ej_planting$Count))) |> 
+  gt() |> 
+  tab_header(title='Trees planted in Environmental Justice communities') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+## Planting in special projects
+
+Some trees have been planted as part of dedicated projects such as
+Arbor Week and neighborhood plantings. This table summarizes special project
+plantings.
+
+```{r projects}
+project_planting = planted |> 
+  filter(!is.na(`Planting Project`)) |> 
+  count(Year, `Planting Project`) |>
+  mutate(`Planting Project`=
+           case_match(`Planting Project`,
+                      'ARBOR WK' ~ 'Arbor Week',
+                      'CDH' ~ 'Cooley Dickenson Hosp.',
+                      'NBHD' ~ 'Neighborhood',
+                      .default = str_to_title(`Planting Project`))) |> 
+  pivot_wider(names_from='Planting Project', values_from='n') |> 
+  mutate(Year=as.character(Year))
+
+project_planting |> 
+  bind_rows(summarize(project_planting, across(-Year, \(x) sum(x, na.rm = TRUE))) |> 
+              mutate(Year='Total')) |> 
+  gt() |> 
+  tab_header(title='Trees planted in special projects') |> 
+  sub_missing(missing_text='-') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+## Planting location description
 
 The trees planted are predominantly in the tree belt and right-of-way
 (`r int_pct(mean(planted$Location %in% c('TREE BELT', 'RIGHT OF WAY'), na.rm=TRUE))`)
@@ -247,12 +332,8 @@ and set back
 (`r int_pct(mean(planted$Location %in% c('SET BACK', 'SET BACK WITH AGREEMENT'), na.rm=TRUE))`) with 12% in other locations.
 
 ```{r yearly_location}
-
-locations = c("Street Tree", "Park Tree", "Back of Sidewalk", "Public School",
-              "Planting Strip", "Golf Course", "City Building")
 location_data = planted %>% 
   filter(!is.na(Location)) |> 
-  #mutate(Location=if_else(Location %in% locations, Location, 'Other')) %>% 
   group_by(Year) %>% 
   count(Location) %>% 
   arrange(Year, desc(n)) %>% 
@@ -289,14 +370,21 @@ ggplot(aes(Year, value, fill=name)) +
 ## Planting map
 
 This map shows the approximate locations of the `r comma(sum(!planted$dead))`
-surviving trees.
+surviving trees. Overlays show Northampton wards and Environmental Justice (EJ)
+communities.
+
+Mouse-over trees for additional information.
 
 :::{.column-page}
 
 ```{r map}
-locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 
-  st_transform(crs=4326) |> 
-  select(Num, Street=Street_orig, Ward)
+wards = read_sf(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_ward_precinct_2010_20190916.shp')) |> 
+  mutate(ward=str_sub(WARD, 1, 1)) |> 
+  group_by(ward) |> 
+  summarize() |> 
+  st_transform(4326)
+
+ward_palette = colorFactor(RColorBrewer::brewer.pal(7, 'Pastel1'), wards$ward)
 
 summarize_names = function(common_names) {
   tibble(names=str_to_title(common_names)) |> 
@@ -317,15 +405,23 @@ map_data = planted |>
          label=paste0(address, ' (', count, ' trees)<br><br>', name_label) |> 
            lapply(htmltools::HTML) |> unname())
 
-map_data = inner_join(map_data, locations) |> 
+map_data = inner_join(map_data, planting_locations) |> 
   st_as_sf()
 
 leaflet(width='800px', height='700px') |> 
   setView(-72.667, 42.330, 12) |> 
   addTiles("http://tiles.mapc.org/basemap/{z}/{x}/{y}.png",
           attribution='Map tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://www.mass.gov/mgis/">MassGIS</a>.') |> 
+  addPolygons(data=ej, weight=1, fillOpacity=0.1, color='black',
+              group='EJ') |> 
+  addPolygons(data=wards, label=~paste('Ward', ward), group='Wards',
+              weight=1, fillOpacity=0.2, fillColor=~ward_palette(ward)) |> 
   addCircleMarkers(data=map_data, radius=~5+sqrt(count), label=~label,
-                   stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5)
+                   group='Trees',
+                   stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
+  addLayersControl(overlayGroups=c('Trees', 'Wards', 'EJ'),
+                   options=layersControlOptions(collapsed=FALSE)) |> 
+  hideGroup('EJ')
 
 ```
 
