@@ -333,7 +333,7 @@ and set back
 
 ```{r yearly_location}
 location_data = planted %>% 
-  filter(!is.na(Location)) |> 
+  mutate(Location = if_else(is.na(Location), 'Unknown', Location)) |> 
   group_by(Year) %>% 
   count(Location) %>% 
   arrange(Year, desc(n)) %>% 
