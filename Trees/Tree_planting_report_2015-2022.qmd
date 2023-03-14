@@ -266,10 +266,6 @@ ej = read_sf('~/Dev/ej2020/ej2020_gdb.zip') |>
   filter(MUNICIPALITY=='Northampton') |> 
   st_transform(crs=4326)
 
-planting_locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 
-  st_transform(crs=4326) |> 
-  select(Num, Street=Street_orig, Ward)
-
 ej_locations = planting_locations[ej,] |> 
   st_drop_geometry()
 
@@ -386,32 +382,10 @@ wards = read_sf(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_war
 
 ward_palette = colorFactor(RColorBrewer::brewer.pal(7, 'Pastel1'), wards$ward)
 
-summarize_names = function(common_names) {
-  tibble(names=str_to_title(common_names)) |> 
-    count(names, sort=TRUE) |> 
-    mutate(label=paste(n, names)) |> 
-    pull(label) |> 
-    paste(collapse='<br>')
-}
-
-map_data = planted |> 
-  filter(!dead) |> 
-  group_by(Num, Street, Ward) |> 
-  summarize(count=n(),
-            name_label=summarize_names(`Common Name`),
-            .groups='drop'
-  ) |> 
-  mutate(address=str_to_title(if_else(is.na(Num), Street, paste(Num, Street))),
-         label=paste0(address, ' (', count, ' trees)<br><br>', name_label) |> 
-           lapply(htmltools::HTML) |> unname())
-
-map_data = inner_join(map_data, planting_locations) |> 
-  st_as_sf()
-
-leaflet(width='800px', height='700px') |> 
+leaflet(width='900px', height='800px') |> 
   setView(-72.667, 42.330, 12) |> 
-  addTiles("http://tiles.mapc.org/basemap/{z}/{x}/{y}.png",
-          attribution='Map tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://www.mass.gov/mgis/">MassGIS</a>.') |> 
+  addProviderTiles('CartoDB.Positron', group='Street') |> 
+  addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
   addPolygons(data=ej, weight=1, fillOpacity=0.1, color='black',
               group='EJ') |> 
   addPolygons(data=wards, label=~paste('Ward', ward), group='Wards',
@@ -419,8 +393,9 @@ leaflet(width='800px', height='700px') |>
   addCircleMarkers(data=map_data, radius=~5+sqrt(count), label=~label,
                    group='Trees',
                    stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
-  addLayersControl(overlayGroups=c('Trees', 'Wards', 'EJ'),
-                   options=layersControlOptions(collapsed=FALSE)) |> 
+  addLayersControl(baseGroups=c('Street', 'Satellite'),
+    overlayGroups=c('Trees', 'Wards', 'EJ'),
+    options=layersControlOptions(collapsed=FALSE)) |> 
   hideGroup('EJ')
 
 ```
