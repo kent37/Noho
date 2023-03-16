@@ -17,6 +17,7 @@ execute:
 table.gt_table {
     color: var(--quarto-body-color);
     font-size: 14px;
+    width: auto;
 }
 </style>
 
@@ -93,14 +94,15 @@ make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name='') {
 ```{r streets}
 # Streets from OpenStreetMap
 # Overpass Turbo query:
+# [bbox: 42.28414,-72.74122,42.37524,-72.58421];
 # (way
-#   [highway=primary]({{bbox}});
+#   [highway=primary];
 # way
-#   [highway=secondary]({{bbox}});
+#   [highway=secondary];
 # way
-#   [highway=tertiary]({{bbox}});
+#   [highway=tertiary];
 # way
-#   [highway=residential]({{bbox}});
+#   [highway=residential];
 #  );
 # 
 # /*added by auto repair*/
@@ -136,9 +138,12 @@ The Northampton Committee on Public Planting has identified numerous
 priority regions for new plantings. This report summarizes 2015-2022 planting in
 many of the priority regions.
 
-## Proximity to downtown centers
+The tree locations in this analysis are approximate, derived by
+geocoding the tree addresses. This locates most trees on the building at the
+tree address, rather than in the correct location - typically on the 
+right-of-way.
 
-?? Do I have the right locations for the circle centers?
+## Proximity to downtown centers
 
 ```{r downtown}
 qmile_raw = read_sheet(
@@ -149,51 +154,56 @@ qmile_raw = read_sheet(
 
 qmile_goals = qmile_raw |> 
   filter(`Ownership:         R/S/?/B/C`=='R') |> # Right-of-way only per Molly
-  transmute(Sector = str_sub(Sector, 1, 1),
-            Count=parse_number(replace_na(`Number of  Trees`, '1'))) |> 
+  mutate(Count=parse_number(replace_na(`Number of  Trees`, '1'))) |> 
   summarize(.by=Sector, Sites=sum(Count)) |> 
-  mutate(Sector=case_match(Sector,
+  mutate(Neighborhood=case_match(str_sub(Sector, 1, 1),
                            'F' ~ 'Florence',
                            'N' ~ 'Northampton',
                            'L' ~ 'Leeds'))
 
-centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'))
-quarter_mile_in_meters = 402.336
-centers = st_buffer(centers, quarter_mile_in_meters) |> 
-  st_transform(4326)
+centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPolys') |> 
+  st_make_valid() |> 
+  st_transform(4326) |> 
+  mutate(Neighborhood=factor(City), 
+         Sector=factor(Code))
 
 center_trees = st_join(map_data, centers, left=FALSE)
 qmile_actual = center_trees |> 
   st_drop_geometry() |> 
-  summarize(.by=Name, Planted=sum(count))
+  summarize(.by=c(Neighborhood, Sector), Planted=sum(count))
 
 center_summary = qmile_goals |> 
-  left_join(qmile_actual, by=c(Sector='Name')) |> 
-  rename(Neighborhood=Sector)
+  left_join(qmile_actual) |> 
+  mutate(Planted=replace_na(Planted, 0)) |> 
+  arrange(desc(Neighborhood), Sector)
 ```
 
 The Committee on Public Planting has identified
 `r sum(qmile_goals$Sites)` possible planting locations in the public 
-right-of-way and within 1/4 mile
-of the Northampton, Florence and Leeds city centers. To date,
+right-of-way near
+the Northampton, Florence and Leeds city centers. To date,
 `r sum(qmile_actual$Planted)` trees have been planted in these regions.
 
-```{r downtown-map}
-center_summary |> 
-  bind_rows(summarise(center_summary, across(-Neighborhood, sum)) |> 
-              mutate(Neighborhood='Total')) |> 
-  gt() |> 
-  tab_header(title='City center planting sites and trees planted, 2015-2022') |> 
-  tree_table_options(has_total_row=TRUE)
+The downtown areas were further divided into 4-5 sectors. This table
+summarizes the planting per sector; the map shows the trees planted
+in each sector.
 
-make_map(center_trees, centers, centers$Name, 'City centers')
+```{r downtown_table}
+center_summary |> 
+  select(Neighborhood, Sector, Sites, Planted) |> 
+  gt(rowname_col='Sector', groupname_col='Neighborhood') |> 
+  summary_rows(groups=TRUE, columns=c(Sites, Planted), 
+               fns=list(Total=~sum(.)), decimals=0) |> 
+  grand_summary_rows(columns=c(Sites, Planted), 
+               fns=list(Total=~sum(.)), decimals=0) |> 
+  tab_header(title='Downtown trees planted 2015-2022') |> 
+  tab_source_note(source_text)
 ```
 
-## Proximity to community centers
 
-?? Needs definition of proximity and list of actual locations
-
-Schools, pre-schools, hospitals (Cooley Dick, VA, Nursing Homes, Nonotuck), vet centers, houses of worship, Flo Civic Center, Senior Center, animal hospitals
+```{r downtown-map}
+make_map(center_trees, centers, centers$Sector, 'City centers')
+```
 
 ## Main arteries through town
 
@@ -225,9 +235,10 @@ make_map(artery_trees, osm_artery_roads, osm_artery_roads$name, 'Arteries')
 
 ## City parking lots
 
-?? What is Registry/A2Z parking lot?
+I don't have good enough information about 
+the actual tree locations to sort this out.
 
-```{r parking}
+```{r parking, eval=FALSE}
 # From Overpass Turbo query https://overpass-turbo.eu/
 # way
 #   [amenity=parking]
@@ -235,7 +246,8 @@ make_map(artery_trees, osm_artery_roads, osm_artery_roads$name, 'Arteries')
 # (._;>;);
 # out;
 
-lots = read_sf(here::here('Shapefiles/parking_lots.geojson'))
+lots = read_sf(here::here('Shapefiles/parking_lots.geojson')) |> 
+  filter(str_starts(id, 'way/'))
 
 lot_names = c('Hampton Avenue Lot', "Round House Lot", "Armory Street Lot",
               "James House Lot", "Masonic Street Lot", "Strong Avenue Lot"
@@ -248,7 +260,8 @@ ways = tribble(
   "Mulino's Lot", '157013633',
   "Old Honda Dealership", '113730321',
   'WEBS', '205658296',
-  'Public Health Department', '205658295'
+  'Public Health Department', '205658295',
+  'Merrick Lane', '152097595'
   ) |> 
   mutate(way=paste0('way/', way))
 
@@ -257,18 +270,16 @@ ways_lots = left_join(ways, lots,
   select(-name.lots)
 
 map_lots = bind_rows(named_lots, ways_lots)
+#map_lots = lots
 buffered_lots = map_lots |> 
   st_transform(26986) |>
-  st_buffer(30) |> 
+  st_buffer(10) |> 
   st_transform(4326)
 lot_trees = map_data[buffered_lots,]
 ```
 
-Approximately `r sum(lot_trees$count)` trees have been planted near
-city parking lots.
-
-```{r lot_map}
-make_map(lot_trees, map_lots, map_lots$name, 'Parking lots')
+```{r lot_map, eval=FALSE}
+make_map(lot_trees, map_lots, overlay_labels=NULL, 'Parking lots')
 
 ```
 
