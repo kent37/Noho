@@ -33,6 +33,10 @@ library(sf)
 
 ```{r data, cache=TRUE}
 source(here::here('Trees/Read_and_clean_planting.R'))
+
+# Add an ID so we can easily union the various priority areas
+map_data$tree_id = seq_len(nrow(map_data))
+priority_tree_ids = c()
 ```
 
 ```{r setup}
@@ -53,7 +57,7 @@ tree_table_options = function(table, has_total_row=FALSE) {
   
   if (has_total_row) {
     table = table %>% 
-      tab_style(locations=cells_body(rows=Neighborhood %in% c('Total')), 
+      tab_style(locations=cells_body(rows=table['_data'][[1]][[1]] %in% c('Total')), 
                 style=list(cell_text(weight='bold'), 
                            cell_borders(sides='top', weight=px(2))))
   }
@@ -203,6 +207,7 @@ center_summary |>
 
 ```{r downtown-map}
 make_map(center_trees, centers, centers$Sector, 'City centers')
+priority_tree_ids = union(priority_tree_ids, center_trees$tree_id)
 ```
 
 ## Main arteries through town
@@ -231,6 +236,8 @@ throughout Northampton including
 #setdiff(osm_artery_names, osm_artery_roads$name)
 
 make_map(artery_trees, osm_artery_roads, osm_artery_roads$name, 'Arteries')
+priority_tree_ids = union(priority_tree_ids, artery_trees$tree_id)
+
 ```
 
 ## City parking lots
@@ -285,9 +292,6 @@ make_map(lot_trees, map_lots, overlay_labels=NULL, 'Parking lots')
 
 ## Proximity to low-income neighborhoods
 
-?? How to define proximity? I've used actual address.
-Where is Leeds apt bldg? Include
-Market St. area?, Hawley St.?,  Fruit St. Apts? If so need definition. 
 
 ```{r low-income}
 # Some guesses
@@ -300,13 +304,23 @@ low_income_bldg = tribble(
   '491 Bridge Rd', 'Meadowbrook Apts',
   '81 Conz St', 'Salvo House',
   '49 Old South St', 'MacDonald House',
-  #'??', 'Leeds Apt',
   '91 Grove St', 'Grove Street Inn'
 )
 
+# Streets
+low_income_streets = c(
+  "MARKET ST", "GRAVES AVE", "HAWLEY ST", "FRUIT ST", 
+  "DAMON RD", "LANE PLANT RD", "BRIDGE RD", "MAIN ST, LEEDS",
+  "GLENDALE RD", "RUST AVE"
+)
 low_income_trees = low_income_bldg |> 
   left_join(map_data) |> 
-  st_as_sf()
+  st_as_sf() |> 
+  bind_rows(map_data |> filter(Street %in% low_income_streets)) |> 
+  mutate(Location = coalesce(Location, str_to_title(Street)))
+
+priority_tree_ids = union(priority_tree_ids, low_income_trees$tree_id)
+
 ```
 
 Several low-income areas have been identified for planting including
@@ -319,9 +333,22 @@ low_income_trees |>
   st_drop_geometry() |> 
   filter(!is.na(count)) |> 
   summarize(.by=Location, Count=sum(count)) |> 
+  arrange(desc(Count)) |> 
   gt() |> 
   tab_header(title='Trees planted in low-income areas') |> 
   tab_source_note(source_text)
+```
+
+```{r low-income-map}
+osm_low_income_names = names_to_osm(low_income_streets)
+osm_low_income_roads = osm_roads |> filter(name %in% osm_low_income_names)
+
+# Any missing?
+# setdiff(osm_low_income_names, osm_roads$name)
+
+make_map(low_income_trees, osm_low_income_roads, osm_low_income_roads$name, 
+         'Low-income areas')
+
 ```
 
 ## Heavily trafficked secondary streets
@@ -358,6 +385,7 @@ osm_secondary_roads = osm_roads |> filter(name %in% osm_secondary_names)
 
 make_map(secondary_trees, osm_secondary_roads, osm_secondary_roads$name, 
          'Secondary streets')
+priority_tree_ids = union(priority_tree_ids, secondary_trees$tree_id)
 ```
 
 ## Neighborhoods with sparse tree cover
@@ -386,6 +414,7 @@ osm_sparse_roads = osm_roads |> filter(name %in% osm_sparse_names)
 # setdiff(osm_sparse_names, osm_sparse_roads$name)
 
 make_map(sparse_trees, osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover')
+priority_tree_ids = union(priority_tree_ids, sparse_trees$tree_id)
 ```
 
 ## Businesses with possible planting sites
@@ -414,6 +443,7 @@ businesses = tribble(
 business_trees = businesses |> 
   left_join(map_data) |> 
   st_as_sf()
+priority_tree_ids = union(priority_tree_ids, business_trees$tree_id)
 ```
 
 Several businesses have been identified as having possible planting sites
@@ -432,3 +462,63 @@ business_trees |>
   tab_header(title='Trees planted at businesses') |> 
   tab_source_note(source_text)
 ```
+
+## Summary of priority planting
+
+```{r priority}
+map_data$priority_tree = map_data$tree_id %in% priority_tree_ids
+```
+
+Of the `r sum(map_data$count)` trees planted, 
+`r sum(map_data |> filter(priority_tree) |> pull(count))` were in priority
+areas.
+
+```{r priority_by_year}
+# Join map_data back to planted to get priority and year
+planted_with_priority = planted |> 
+  filter(!dead) |> 
+  left_join(map_data |> 
+              st_drop_geometry() |> 
+              select(Num, Street, Ward, priority_tree))
+
+priority_by_year = planted_with_priority |> 
+  summarize(.by=c(Year, priority_tree), Count=n()) |> 
+  pivot_wider(names_from='priority_tree', values_from='Count') |> 
+  select(Year, Priority='TRUE', `Non-priority`='FALSE')
+
+priority_by_year |> 
+  arrange(Year) |> 
+  mutate(Year=as.character(Year)) |> 
+  bind_rows(summarize(priority_by_year, across(-Year, sum)) |> 
+              mutate(Year='Total')) |> 
+  mutate(`Percent priority`=int_pct(Priority/(Priority+`Non-priority`))) |> 
+  gt() |> 
+  tab_header('Priority tree planting 2015-2022') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+This map shows all trees planted with priority trees in light green
+and other trees in dark green.
+
+```{r all_priority_map}
+  bbox = unname(st_bbox(map_data))
+  leaflet(width='800px', height='700px') |> 
+    fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
+    addProviderTiles('CartoDB.Positron', group='Street') |> 
+    addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
+    addCircleMarkers(data=map_data |> filter(priority_tree),
+                     radius=~5+sqrt(count), label=~label,
+                     group='Priority trees',
+                     stroke=FALSE, 
+                     fillColor="#1B9E77", fillOpacity=0.5) |> 
+    addCircleMarkers(data=map_data |> filter(!priority_tree),
+                     radius=~5+sqrt(count), label=~label,
+                     group='Other trees',
+                     stroke=FALSE, 
+                     fillColor="#1B6E37", fillOpacity=0.5) |> 
+    addLayersControl(baseGroups=c('Street', 'Satellite'),
+      overlayGroups=c('Priority trees', 'Other trees'),
+      options=layersControlOptions(collapsed=FALSE))
+
+```
+
