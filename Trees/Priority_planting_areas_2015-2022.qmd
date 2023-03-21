@@ -127,6 +127,7 @@ names_to_osm = function(streets) {
       ' Ave$' = ' Avenue',
       ' Cir$' = ' Circle',
       ' Dr$' = ' Drive',
+      ' Ln$' = ' Lane',
       ' Rd$' = ' Road',
       ' St$' = ' Street',
       ' St, Florence$' = ' Street',
@@ -398,9 +399,10 @@ sparse_streets = c(
   'WESTWOOD TERR', 'DREWSEN DR', 'CAHILLANE TERR', 'FOREST GLEN DR', 
   'O\'DONNELL DR', 'WINCHESTER TERR', 'REDFORD DR', 'DEERFIELD DR', 
   'ACREBROOK DR', 'AUSTIN CIR', 'BRIERWOOD DR', 'ACREBROOK DR', 
-  'TARA CIRCLE', 'GOLDEN DR', 'SPRUCE HILL AVE', 'HICKORY DR', 'BIRCH HILL RD'
+  'TARA CIRCLE', 'GOLDEN DR', 'SPRUCE HILL AVE', 'HICKORY DR', 'BIRCH HILL RD',
+  'WOOD AVE', 'BEATTIE DR', 'GILRAIN TERR', 'TARA CIR', 
+  'GREGORY LN', 'MATTHEW DR', 'PIONEER KNOLLS', 'WOODS RD'
 )
-
 sparse_trees = map_data |> 
   filter(Street %in% sparse_streets)
 ```
