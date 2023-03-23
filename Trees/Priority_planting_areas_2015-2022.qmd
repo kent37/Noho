@@ -64,7 +64,7 @@ tree_table_options = function(table, has_total_row=FALSE) {
   table
 }
 
-make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name='') {
+make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name=NULL) {
   bbox = unname(st_bbox(trees))
   map = leaflet(width='800px', height='700px') |> 
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
@@ -73,15 +73,7 @@ make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name='') {
   
   overlay_groups = 'Trees'
   if (!is.null(overlay)) {
-    if (any(str_detect(class(st_geometry(overlay)), 'POLYGON'))) {
-    map = map |> 
-      addPolygons(data=overlay, weight=1, fillOpacity=0.1, color='black',
-                  label=overlay_labels, group=overlay_name)
-    } else if (any(str_detect(class(st_geometry(overlay)), 'LINESTRING'))) {
-    map = map |> 
-      addPolylines(data=overlay, weight=1, fillOpacity=0.1, color='black',
-                  label=overlay_labels, group=overlay_name)
-    }
+    map = map |> add_overlay(overlay, overlay_labels, overlay_name)
     overlay_groups = c(overlay_groups, overlay_name)
   }
   
@@ -92,6 +84,19 @@ make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name='') {
     addLayersControl(baseGroups=c('Street', 'Satellite'),
       overlayGroups=overlay_groups,
       options=layersControlOptions(collapsed=FALSE))
+}
+
+add_overlay = function(map, overlay, overlay_labels, overlay_name) {
+  if (any(str_detect(class(st_geometry(overlay)), 'POLYGON'))) {
+    map = map |> 
+      addPolygons(data=overlay, weight=1, fillOpacity=0.1, color='black',
+                  label=overlay_labels, group=overlay_name)
+    } else if (any(str_detect(class(st_geometry(overlay)), 'LINESTRING'))) {
+    map = map |> 
+      addPolylines(data=overlay, weight=1, fillOpacity=0.1, color='black',
+                  label=overlay_labels, group=overlay_name)
+    }
+  map
 }
 ```
 
@@ -118,6 +123,12 @@ noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'))
 osm_roads = read_sf(here::here('Shapefiles/Roads.geojson'))
 osm_roads = osm_roads[noho |> st_transform(st_crs(osm_roads)),]
 
+main_st_leeds = osm_roads |> 
+  filter(id %in% c('way/155184017', 'way/155184015', 'way/155184013'))
+
+main_st_florence = osm_roads |> 
+  filter(id %in% c('way/9224974', 'way/942414692'))
+
 # Convert street names as listed in map_data to the format that OpenStreetMap
 # uses so we can look them up in osm_roads
 names_to_osm = function(streets) {
@@ -139,7 +150,7 @@ names_to_osm = function(streets) {
 
 ## Introduction
 
-The Northampton Committee on Public Planting has identified numerous
+The Northampton Urban Forestry Commission has identified numerous
 priority regions for new plantings. This report summarizes 2015-2022 planting in
 many of the priority regions.
 
@@ -183,7 +194,7 @@ center_summary = qmile_goals |>
   arrange(desc(Neighborhood), Sector)
 ```
 
-The Committee on Public Planting has identified
+The Urban Forestry Commission has identified
 `r sum(qmile_goals$Sites)` possible planting locations in the public 
 right-of-way near
 the Northampton, Florence and Leeds city centers. To date,
@@ -241,10 +252,10 @@ priority_tree_ids = union(priority_tree_ids, artery_trees$tree_id)
 
 ```
 
-## City parking lots
+<!-- ## City parking lots
 
 I don't have good enough information about 
-the actual tree locations to sort this out.
+the actual tree locations to sort this out. -->
 
 ```{r parking, eval=FALSE}
 # From Overpass Turbo query https://overpass-turbo.eu/
@@ -325,7 +336,9 @@ priority_tree_ids = union(priority_tree_ids, low_income_trees$tree_id)
 ```
 
 Several low-income areas have been identified for planting including
-`r low_income_bldg$Location |> sort() |> str_flatten_comma(', and ')`
+`r low_income_bldg$Location |> sort() |> str_flatten_comma(', and ')` and
+the streets 
+`r low_income_streets |> sort() |> str_to_title() |> str_flatten_comma(', and ')`.
 
 These areas have had trees planted:
 
@@ -342,13 +355,14 @@ low_income_trees |>
 
 ```{r low-income-map}
 osm_low_income_names = names_to_osm(low_income_streets)
-osm_low_income_roads = osm_roads |> filter(name %in% osm_low_income_names)
+osm_low_income_roads = osm_roads |> filter(name %in% osm_low_income_names) |> 
+  bind_rows(main_st_leeds)
 
 # Any missing?
 # setdiff(osm_low_income_names, osm_roads$name)
 
 make_map(low_income_trees, osm_low_income_roads, osm_low_income_roads$name, 
-         'Low-income areas')
+         'Low-income streets')
 
 ```
 
@@ -520,18 +534,28 @@ and other trees in dark green.
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
     addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
+    add_overlay(centers, centers$Sector, 'City centers') |> 
+    add_overlay(osm_artery_roads, osm_artery_roads$name, 'Arteries') |> 
+    add_overlay(osm_low_income_roads, osm_low_income_roads$name, 
+                'Low-income streets') |> 
+    add_overlay(osm_secondary_roads, osm_secondary_roads$name, 
+         'Secondary streets') |> 
+    add_overlay(osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover') |> 
     addCircleMarkers(data=map_data |> filter(priority_tree),
                      radius=~5+sqrt(count), label=~label,
                      group='Priority trees',
                      stroke=FALSE, 
-                     fillColor="#1B9E77", fillOpacity=0.5) |> 
+                     fillColor="#1B9E57", fillOpacity=0.5) |> 
     addCircleMarkers(data=map_data |> filter(!priority_tree),
                      radius=~5+sqrt(count), label=~label,
                      group='Other trees',
                      stroke=FALSE, 
-                     fillColor="#1B6E37", fillOpacity=0.5) |> 
+                     fillColor="#1B6E57", fillOpacity=0.5) |> 
     addLayersControl(baseGroups=c('Street', 'Satellite'),
-      overlayGroups=c('Priority trees', 'Other trees'),
+      overlayGroups=c('Priority trees', 'Other trees',
+                      'City centers', 'Arteries',
+                      'Low-income streets', 'Secondary streets',
+                      'Sparse cover'),
       options=layersControlOptions(collapsed=FALSE))
 
 ```
