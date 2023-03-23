@@ -497,6 +497,18 @@ priority_by_year |>
   gt() |> 
   tab_header('Priority tree planting 2015-2022') |> 
   tree_table_options(has_total_row=TRUE)
+
+priority_by_year |>
+  mutate(Era = if_else(Year<=2018, '2018 and before', 'After 2018')) |> 
+  select(-Year) |> 
+  summarize(.by=Era, across(everything(), sum)) |> 
+  bind_rows(summarize(priority_by_year, across(-Year, sum)) |> 
+              mutate(Era='Total')) |> 
+  mutate(`Percent priority`=int_pct(Priority/(Priority+`Non-priority`))) |> 
+  gt() |> 
+  tab_header('Priority tree planting 2015-2022',
+             subtitle='Priority planting started in 2019') |> 
+  tree_table_options(has_total_row=TRUE)
 ```
 
 This map shows all trees planted with priority trees in light green
