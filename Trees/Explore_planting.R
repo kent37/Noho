@@ -97,8 +97,8 @@ addresses$Street_orig = addresses$Street
 addresses$Street = addresses$Street |> 
   str_remove(', (FLORENCE|LEEDS)$')
 
-addresses$Street = addresses$Street |> 
-  str_replace_all(c(
+expand_st_to_street = function(sts) {
+    str_replace_all(sts, c(
     ' DR$' = ' DRIVE',
     ' ST$' = ' STREET',
     ' PL$' = ' PLACE',
@@ -111,6 +111,9 @@ addresses$Street = addresses$Street |>
     ' CIR$' = ' CIRCLE',
     ' PLZ$' = ' PLAZA'
   ))
+}
+
+addresses$Street = addresses$Street |> expand_st_to_street()
 
 matched_addresses = 
   inner_join(addresses, massgis_wards,
@@ -160,3 +163,55 @@ missing = anti_join(planted |> filter(!is.na(Street)),
                     all_matched,
                     by=c('Num', Street='Street_orig', 'Ward'))
 nrow(missing) # Should be zero!
+
+# Geocode some places that may not have trees associated with them
+# These tribbles are duplicates from the priority planting report
+businesses = tribble(
+  ~Location, ~address,
+  'Spare Time', '525 Pleasant St',
+  'Daily Hampshire Gazette', '115 Conz St',
+  'Cooley Dickenson Hospital', '30 Locust St',
+  'Kollmorgen', '50 Prince St',
+  'St. Elizabeth Ann Church', '91 King St', # Actually 99 but we have loc'n for 91
+  'Northampton Tire', '182 King St',
+  'Acme Automotive', '220 King St',
+  '200 King St', '200 King St',
+  '206 King St', '206 King St',
+  'Bluebonnet Diner', '324 King St',
+  'NAPA Auto Parts', '348 King St',
+  'Woodward & Grinnell', '8 North King St',
+  'Enterprise Car Rentals', '24 North King St',
+  'Big Y', '136 North King St',
+  'Cooke Ave. Apts', '316A Hatfield St',
+  'Cooke Ave. Apts', '364A Hatfield St',
+  'Cooke Ave. Apts', '380A Hatfield St'
+) |> 
+  mutate(Category='Business')
+
+low_income_bldg = tribble(
+  ~address, ~Location, 
+  '80 Damon Rd', 'River Run Apts',
+  '241 Jackson St', 'Hampshire Heights',
+  '178 Florence Rd', 'Florence Heights',
+  '491 Bridge Rd', 'Meadowbrook Apts',
+  '81 Conz St', 'Salvo House',
+  '49 Old South St', 'MacDonald House',
+  '91 Grove St', 'Grove Street Inn'
+) |> 
+  mutate(Category='Low income')
+
+locations = bind_rows(businesses, low_income_bldg) |> 
+  separate(address, into=c('ADDR_NUM', 'STREETNAME'),
+           sep=' ', remove=FALSE, extra='merge') |> 
+  mutate(STREETNAME=expand_st_to_street(str_to_upper(STREETNAME))) |> 
+  right_join(massgis |> select(ADDR_NUM, STREETNAME, SITE_NAME), y=_, multiple='all') |> 
+  st_buffer(20) |> 
+  select(-ADDR_NUM) |> 
+  nest(data=geometry) |> 
+  mutate(data=map(data, ~st_convex_hull(st_union(st_geometry(.x)))[[1]])) |> 
+  st_as_sf(sf_column_name='data') |> 
+  st_set_crs(st_crs(massgis)) |> 
+  st_transform(4326)
+
+st_write(locations, 
+         here::here('Shapefiles/Extra_locations.gpkg'), delete_layer=TRUE)

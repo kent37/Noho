@@ -36,10 +36,10 @@ source(here::here('Trees/Read_and_clean_planting.R'))
 
 # Add an ID so we can easily union the various priority areas
 map_data$tree_id = seq_len(nrow(map_data))
-priority_tree_ids = c()
 ```
 
 ```{r setup}
+priority_tree_ids = c()
 source_text = 'Data: Northampton Tree Warden | Analysis: Kent S Johnson'
 
 # First two colors of RColorBrewer::brewer.pal(3, 'Dark2')
@@ -307,7 +307,10 @@ make_map(lot_trees, map_lots, overlay_labels=NULL, 'Parking lots')
 
 ```{r low-income}
 # Some guesses
+extra_locations = read_sf(here::here('Shapefiles/Extra_locations.gpkg'))
+
 # Specific buildings
+# !! This is duplicated in Explore_planting.R !!
 low_income_bldg = tribble(
   ~address, ~Location, 
   '80 Damon Rd', 'River Run Apts',
@@ -327,6 +330,7 @@ low_income_streets = c(
 )
 low_income_trees = low_income_bldg |> 
   left_join(map_data) |> 
+  filter(!is.na(count)) |> 
   st_as_sf() |> 
   bind_rows(map_data |> filter(Street %in% low_income_streets)) |> 
   mutate(Location = coalesce(Location, str_to_title(Street)))
@@ -345,7 +349,6 @@ These areas have had trees planted:
 ```{r low-income-table}
 low_income_trees |> 
   st_drop_geometry() |> 
-  filter(!is.na(count)) |> 
   summarize(.by=Location, Count=sum(count)) |> 
   arrange(desc(Count)) |> 
   gt() |> 
@@ -361,8 +364,11 @@ osm_low_income_roads = osm_roads |> filter(name %in% osm_low_income_names) |>
 # Any missing?
 # setdiff(osm_low_income_names, osm_roads$name)
 
+low_income_locations = extra_locations |> filter(Category=='Low income')
 make_map(low_income_trees, osm_low_income_roads, osm_low_income_roads$name, 
-         'Low-income streets')
+         'Low-income locations') |> 
+  add_overlay(low_income_locations,
+              low_income_locations$Location, 'Low-income locations')
 
 ```
 
@@ -437,13 +443,14 @@ priority_tree_ids = union(priority_tree_ids, sparse_trees$tree_id)
 
 
 ```{r businesses}
+# !! This is duplicated in Explore_planting.R !!
 businesses = tribble(
-  ~name, ~address,
+  ~Location, ~address,
   'Spare Time', '525 Pleasant St',
   'Daily Hampshire Gazette', '115 Conz St',
   'Cooley Dickenson Hospital', '30 Locust St',
   'Kollmorgen', '50 Prince St',
-  'St. Elizabeth Ann Church', '99 King St',
+  'St. Elizabeth Ann Church', '91 King St', # Actually 99 but we have loc'n for 91
   'Northampton Tire', '182 King St',
   'Acme Automotive', '220 King St',
   '200 King St', '200 King St',
@@ -453,9 +460,12 @@ businesses = tribble(
   'Woodward & Grinnell', '8 North King St',
   'Enterprise Car Rentals', '24 North King St',
   'Big Y', '136 North King St',
-  'Cooke Ave. Apts', '328 Hatfield St'
+  'Cooke Ave. Apts', '316A Hatfield St',
+  'Cooke Ave. Apts', '364A Hatfield St',
+  'Cooke Ave. Apts', '380A Hatfield St'
 )
 
+business_locations = extra_locations |> filter(Category=='Business')
 business_trees = businesses |> 
   left_join(map_data) |> 
   st_as_sf()
@@ -464,7 +474,7 @@ priority_tree_ids = union(priority_tree_ids, business_trees$tree_id)
 
 Several businesses have been identified as having possible planting sites
 including
-`r businesses$name |> sort() |> str_flatten_comma(', and ')`
+`r businesses$Location |> sort() |> unique() |> str_flatten_comma(', and ')`
 
 These businesses have had trees planted:
 
@@ -472,8 +482,7 @@ These businesses have had trees planted:
 business_trees |> 
   st_drop_geometry() |> 
   filter(!is.na(count)) |> 
-  summarize(.by=name, Count=sum(count)) |> 
-  rename(Location=name) |> 
+  summarize(.by=Location, Count=sum(count)) |> 
   gt() |> 
   tab_header(title='Trees planted at businesses') |> 
   tab_source_note(source_text)
@@ -537,10 +546,13 @@ and other trees in dark green.
     add_overlay(centers, centers$Sector, 'City centers') |> 
     add_overlay(osm_artery_roads, osm_artery_roads$name, 'Arteries') |> 
     add_overlay(osm_low_income_roads, osm_low_income_roads$name, 
-                'Low-income streets') |> 
+                'Low-income locations') |> 
+    add_overlay(low_income_locations, low_income_locations$Location, 
+                'Low-income locations') |> 
     add_overlay(osm_secondary_roads, osm_secondary_roads$name, 
          'Secondary streets') |> 
     add_overlay(osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover') |> 
+    add_overlay(business_locations, business_locations$Location, 'Businesses') |> 
     addCircleMarkers(data=map_data |> filter(priority_tree),
                      radius=~5+sqrt(count), label=~label,
                      group='Priority trees',
@@ -554,8 +566,8 @@ and other trees in dark green.
     addLayersControl(baseGroups=c('Street', 'Satellite'),
       overlayGroups=c('Priority trees', 'Other trees',
                       'City centers', 'Arteries',
-                      'Low-income streets', 'Secondary streets',
-                      'Sparse cover'),
+                      'Low-income locations', 'Secondary streets',
+                      'Sparse cover', 'Businesses'),
       options=layersControlOptions(collapsed=FALSE))
 
 ```
