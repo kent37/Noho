@@ -202,7 +202,7 @@ low_income_bldg = tribble(
 
 locations = bind_rows(businesses, low_income_bldg) |> 
   separate(address, into=c('ADDR_NUM', 'STREETNAME'),
-           sep=' ', remove=FALSE, extra='merge') |> 
+           sep=' ', extra='merge') |> 
   mutate(STREETNAME=expand_st_to_street(str_to_upper(STREETNAME))) |> 
   right_join(massgis |> select(ADDR_NUM, STREETNAME, SITE_NAME), y=_, multiple='all') |> 
   st_buffer(20) |> 

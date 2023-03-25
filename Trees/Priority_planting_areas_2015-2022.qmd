@@ -65,8 +65,13 @@ tree_table_options = function(table, has_total_row=FALSE) {
 }
 
 make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name=NULL) {
-  bbox = unname(st_bbox(trees))
-  map = leaflet(width='800px', height='700px') |> 
+  bbox = st_bbox(trees)
+  # Can't directly union point and line layers (trees & roads)
+  # We can union the bboxes with a little work
+  if (!is.null(overlay))
+    bbox = st_bbox(st_union(st_as_sfc(bbox), st_as_sfc(st_bbox(overlay))))
+  bbox = unname(bbox)
+  map = leaflet(width='796px', height='700px') |> # 796 is the container width
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
     addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite')
@@ -467,7 +472,7 @@ businesses = tribble(
 
 business_locations = extra_locations |> filter(Category=='Business')
 business_trees = businesses |> 
-  left_join(map_data) |> 
+  inner_join(map_data) |> 
   st_as_sf()
 priority_tree_ids = union(priority_tree_ids, business_trees$tree_id)
 ```
@@ -481,11 +486,14 @@ These businesses have had trees planted:
 ```{r business-table}
 business_trees |> 
   st_drop_geometry() |> 
-  filter(!is.na(count)) |> 
   summarize(.by=Location, Count=sum(count)) |> 
   gt() |> 
   tab_header(title='Trees planted at businesses') |> 
   tab_source_note(source_text)
+```
+
+```{r business-map}
+make_map(business_trees, business_locations, business_locations$Location, 'Businesses')
 ```
 
 ## Summary of priority planting
@@ -539,7 +547,7 @@ and other trees in dark green.
 
 ```{r all_priority_map}
   bbox = unname(st_bbox(map_data))
-  leaflet(width='800px', height='700px') |> 
+  leaflet(width='796px', height='700px') |> 
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
     addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
