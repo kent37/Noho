@@ -4,27 +4,24 @@ library(tidyverse)
 library(leaflet)
 library(plotly)
 library(sf)
-library(sp)
-
-# Northampton outline
-noho = st_read(
-  here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'),
-  quiet=TRUE)
+library(terra)
 
 # Get a reference CRS
 nlcd_crs = local({
   ref_path = here::here("data/NLCD_Tree_and_Land/NLCD_2019_Land_Cover_L48_20210604_cE3J3qNGK7bbzFDvKwex.tiff")
-  raster::crs(raster::raster(ref_path))
+  crs(rast(ref_path))
 })
 
-# Transform noho to match NLCD
-# Convert to Spatial for compatibility with raster::mask
-noho_sp = as_Spatial(st_transform(noho, nlcd_crs))
+# Northampton outline
+noho = st_read(
+  here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'),
+  quiet=TRUE) |> 
+  st_transform(nlcd_crs)
 
-# Read a raster layer and clip to NoHo boundary
-read_layer = function(path, mask_layer=noho_sp) {
-  rast = raster::raster(path)
-  clipped = raster::mask(rast, mask_layer)
+# Read a raster layer and clip to a boundary
+read_layer = function(path, mask_layer=noho) {
+  rast = rast(path)
+  clipped = mask(rast, vect(mask_layer))
   clipped
 }
 
@@ -58,10 +55,10 @@ clip_and_count_layer = function(rast, mask) {
   }, summarize_df = TRUE, progress = FALSE)
 }
 
-# Slower version using raster::mask
+# Slower version using mask
 clip_and_count_layer_slow = function(rast, mask) {
-  clipped = raster::mask(rast, mask)
-  counts = table(raster::getValues(clipped)) %>% 
+  clipped = mask(rast, vect(mask))
+  counts = table(values(clipped), mat=FALSE) %>% 
     as_tibble(.name_repair='universal') %>% 
     rename(value=`...1`)
   counts
