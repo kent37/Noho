@@ -57,3 +57,20 @@ lost_forest_poly =
 lost_forest_poly = st_transform(lost_forest_poly, st_crs(noho)) # Mass state plane
 
 st_write(st_sf(lost_forest_poly), here::here('Trees/Lost_forest_2001_2019.gpkg'), delete_layer=TRUE)
+
+# Make a polygon layer with areas that were <30% tree coverage in 2015
+coverage_2016 = read_layer(
+  here::here('data/NLCD_Tree_and_Land/NLCD_2016_Tree_Canopy_L48_20190831_cE3J3qNGK7bbzFDvKwex.tiff')
+)
+
+# Exclude areas of water and farm
+cov_lt30 = coverage_2016<30 & lc_2019 != 11 & lc_2019 != 81 & lc_2019 != 82
+cov_lt30 = mask(coverage_2016, cov_lt30, maskvalues=FALSE)
+cov_lt30_poly = as.polygons(cov_lt30, dissolve=TRUE, values=FALSE) |> 
+  st_as_sf() |> 
+  st_union() |> 
+  st_cast('POLYGON')
+
+st_write(st_transform(cov_lt30_poly, st_crs(noho)), 
+         here::here('Trees/Lost_forest_2001_2019.gpkg'), 
+         layer='Coverage <30', delete_layer=TRUE)
