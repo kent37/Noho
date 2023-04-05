@@ -1,0 +1,26 @@
+﻿Full Name,Short Name,Class
+Rural Residence,RR,"Residential ""R"" District"
+Suburban Residence,SR,"Residential ""R"" District"
+Urban Residence A,URA,"Residential ""R"" District"
+Urban Residence B,URB,"Residential ""R"" District"
+Urban Residence C,URC,"Residential ""R"" District"
+Central Business - Core,CBc,Character-Based District
+Central Business - Side,CBs,Character-Based District
+Central Business - Gateway,CBg,Character-Based District
+Florence Village - Center,FVc,Character-Based District
+Florence Village - General,FVg,Character-Based District
+General Business,GB,"Business ""B"" District"
+Highway Business,HB,"Business ""B"" District"
+Neighborhood Business,NB,"Business ""B"" District"
+Medical,M,"Medical ""M"" District"
+General Industry,GI,"Industrial ""I"" District"
+Office Industrial,OI,"Industrial ""I"" District"
+Special Conservancy-Flood Plain,SC,"Conservancy ""C"" District"
+Planned Village,PV,"Planned ""P"" District"
+Educational Use,EU,"Overlay ""O"" District"
+"Farms, Forests and Rivers",FFR,"FFR ""FFR"" District"
+Smart Growth Overlay District,,
+Residential Incentive Development,RI,"Overlay ""O"" District"
+Water Supply Protection,WSP,"Overlay ""O"" District"
+Floodplain,FP,"Overlay ""O"" District"
+Sustainable Growth,SG,"Overlay ""O"" District"

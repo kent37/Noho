@@ -105,14 +105,21 @@ noho_acres = raster_count * acre_per_raster
 zoning_categories = read_csv(
   here::here('Trees/Zoning_categories.csv'),
   show_col_types=FALSE
-)
-aggregated_zoning = function() {
-  zoning = st_read(
+) |> 
+  left_join(read_csv(here::here('Shapefiles/Zone_names.csv'),
+                      col_select=1:2, col_names=c('Name', 'Zone'), 
+                      show_col_types=FALSE),
+            by='Zone')
+
+all_zoning = st_read(
     here::here('Shapefiles/zoning_20220429/zoning_districts_20220429.shp'),
     quiet=TRUE
   ) %>% st_transform(nlcd_crs) %>% 
-    select(NAME) %>% 
-    mutate(Class=deframe(zoning_categories)[NAME]) %>% 
+    select(NAME)
+
+aggregated_zoning = function() {
+  all_zoning %>% 
+    mutate(Class=deframe(zoning_categories |> select(Zone, Category))[NAME]) %>% 
     group_by(Class) %>% 
     summarize()
 }

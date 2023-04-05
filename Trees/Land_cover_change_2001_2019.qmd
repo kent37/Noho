@@ -47,7 +47,7 @@ lc_layers =
           .progress='Reading layers')
 
 lost_forest_poly = st_read(here::here('Trees/Lost_forest_2001_2019.gpkg'),
-                           quiet=TRUE)
+                           layer='Lost_forest_2001_2019', quiet=TRUE)
 
 ```
 
@@ -162,16 +162,16 @@ This report uses data from the National Land Coverage Database (NLCD)
 to summarize land cover changes in Northampton, Mass. from
 2001 to 2019. 
 
+NLCD data was obtained from the 
+[Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
+An interactive viewer for the underlying data is available
+[here](https://www.mrlc.gov/viewer).
+
 The NLCD provides data on land cover and land cover change at 30 meter resolution.
 Each 30m square is classified into one of 16 land coverage categories. 
 Data releases every three years, from 2001 to 2019, allow monitoring land cover changes at the resolution of the data.
 
 For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. See the [land cover table](#land-cover-classes) below for details.
-
-The NLCD data is available from the 
-[Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
-An interactive viewer for the underlying data is available
-[here](https://www.mrlc.gov/viewer).
 
 ### Land cover in Northampton
 
@@ -378,7 +378,7 @@ change between 2001 and 2019.
 
 :::
 
-#### Land cover classes
+### Land cover classes
 
 For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. 
 This table shows the land cover categories in the NLCD and the 
@@ -397,6 +397,46 @@ legend %>%
     row_group.as_column = TRUE,
     data_row.padding='4px',
     table_body.hlines.width=0) 
+```
+
+### Zoning map
+
+This map shows the Northampton zoning categories as aggregated for this
+report.
+
+```{r zoning_map}
+map = leaflet(width='95%', height='600px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite')
+  
+zone_colors = RColorBrewer::brewer.pal(5, 'Set1') |> 
+  set_names(c("Urban", "Suburban/Water supply", "Rural", 
+              "Business/industrial", 
+              "Central business"))
+
+zones = all_zoning |> 
+  left_join(zoning_categories, by=c(NAME='Zone')) |> 
+  mutate(color=unname(zone_colors[Category]))
+
+zones$label=str_glue_data(zones, '{Category} ({NAME})')
+
+  map %>%
+    addPolygons(data=zones |> st_transform(4326),
+                weight=1, group='Zones',
+                fillColor=~color,
+                fillOpacity=0.5,
+                label=~label) %>% 
+    addPolygons(data=noho %>% st_transform(4326),
+                weight=1, fill=FALSE, color='grey') %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups='Zones',
+      options=layersControlOptions(collapsed=FALSE)) %>%
+    addLegend(colors=zone_colors, labels=names(zone_colors),
+              title='Aggregated zoning')
+
 ```
 
 <small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
