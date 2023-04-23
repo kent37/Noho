@@ -152,7 +152,7 @@ top_x_table = function(x_counts, col_name) {
                 x_percent) %>% 
     gt() %>% 
     tab_header(title=str_glue('Tree {col_name} planted 2015-2022'),
-               subtitle=str_glue('Top ten {col_name} overall')) %>% 
+               subtitle=str_glue('Top ten {col_name} planted')) %>% 
     tree_table_options(has_total_row=TRUE)
 }
 
@@ -176,7 +176,7 @@ top_x_chart = function(counts, col_name) {
     #rcartocolor::scale_fill_carto_d(palette="Pastel") +
     scale_fill_brewer(str_to_sentence(col_name), palette="Paired") +
     labs(title=str_glue('Tree {col_name} planted 2015-2022'),
-         subtitle=str_glue('Top ten {col_name} overall'),
+         subtitle=str_glue('Top ten {col_name} planted'),
          caption=source_text)
 }
 
@@ -206,7 +206,7 @@ survival = planted |>
 
 gt(survival) %>% 
   tab_header(title=str_glue('Species planted and survived 2015-2022'),
-             subtitle=str_glue('Top ten species overall')) %>% 
+             subtitle=str_glue('Top ten species planted')) %>% 
   tab_spanner_delim('_', columns=3:6) |> 
   tree_table_options()
 
@@ -228,6 +228,61 @@ survival |>
 counts = top_x_counts(Genus)
 top_x_table(counts, 'genera')
 top_x_chart(counts, 'genera')
+```
+
+## Change in top genera
+
+The percentages of genus _Acer_, _Pinus_ and _Picea_ in the urban forest 
+have declined as other genera have been planted. 
+The percentage of _Quercus_ has
+only declined slightly because many were planted. _Tilia_ shows the greatest
+increase in percentage.
+
+```{r change_in_genera}
+previous = read_sf(here::here(
+  'Shapefiles/shade_tree_data_package/data/trees.shp')) |> 
+  st_drop_geometry() |> 
+  transmute(Genus = str_split_i(SPP_BOT, ' ', 1))
+
+current = living |> select(Genus) |> bind_rows(previous)
+top_all = current %>% 
+  count(Genus, sort=TRUE) %>% 
+  pull(Genus) %>% head(10)
+
+top_previous_count = previous %>% 
+  filter(Genus %in% top_all) |> 
+  count(Genus, name='Count') |> 
+  mutate(Genus=factor(Genus), Date='2015', Percent=Count/nrow(previous))
+
+top_all_count = current %>% 
+  filter(Genus %in% top_all) |> 
+  count(Genus, name='Count') |> 
+  mutate(Genus=fct_reorder(factor(Genus), Count, .fun=identity, .desc=TRUE),
+         Date='2022', Percent=Count/nrow(current)) |> 
+  bind_rows(top_previous_count)
+
+top_all_count |> 
+  pivot_wider(names_from='Date', values_from=c('Count', 'Percent'),
+              names_glue='{Date}_{.value}', names_vary='slowest',
+              names_sort=TRUE) |> 
+  mutate(`Change in percent`=`2022_Percent`-`2015_Percent`) |> 
+  arrange(desc(`2022_Count`)) |> 
+  gt() |> 
+  fmt_integer(columns=c(2, 4)) |> 
+  fmt_percent(columns=c(3, 5), decimals=0) |> 
+  fmt_percent(columns=6, decimals=1) |> 
+  tab_spanner_delim('_') |> 
+  tab_header(title='Top genera as percent of total urban forest',
+             subtitle='Top ten genera overall') |> 
+  tree_table_options()
+
+ggplot(top_all_count, aes(x=Date, y=Percent, color=Genus, group=Genus))  +
+  geom_line(linewidth=1) +
+  scale_y_continuous('Percent of total urban forest', labels=scales::percent) +
+  scale_color_brewer(palette="Paired") +
+  labs(title='Change in top genera as percent of total urban forest',
+       subtitle='Top ten genera overall', caption=source_text) +
+  theme_minimal(base_size=12)
 ```
 
 ## Top families planted
