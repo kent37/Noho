@@ -294,6 +294,32 @@ top_x_table(counts, 'families')
 top_x_chart(counts, 'families')
 ```
 
+## Planting by sapling type
+
+```{r by_type}
+by_type = planted |> 
+  count(Year, Type) |> 
+  mutate(Type = str_to_title(replace_na(Type, 'Unknown')))
+
+by_type_wide = by_type |> 
+  pivot_wider(names_from='Type', values_from='n', values_fill=0) |> 
+  mutate(Year=as.character(Year))
+
+by_type_wide |> 
+  bind_rows(summarize(by_type_wide, across(-Year, sum)) |> 
+              mutate(Year='Total')) |> 
+  gt() |>
+  tab_header(title='Trees planted by sapling type') |> 
+  tree_table_options(has_total_row=TRUE)
+
+by_type |> 
+  ggplot(aes(Year, n, fill=Type)) +
+  geom_col() +
+  scale_fill_brewer(palette="Paired") +
+  labs(y='Number of trees planted',
+       caption=source_text)
+```
+
 ## Planting by ward
 
 This table summarizes the number of trees planted by ward.
