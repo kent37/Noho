@@ -220,6 +220,34 @@ survival |>
     labs(title='Top species planted and subsequently removed 2015-2022',
          y='Number of trees planted',
          caption=source_text)
+
+# Yearly planting and survival of the top three failures
+poor_species = survival |> 
+  slice(n()-0:2) |> 
+  pull(Species)
+
+poor_removed = planted |> 
+  filter(Species %in% poor_species) |> 
+  summarize(.by=c(Year, Genus, Species), 
+            Total=n(), 
+            Removed=sum(dead)) |> 
+  arrange(Year) |> 
+  mutate(Year=as.character(Year), 
+         Name=str_glue('{Genus} {Species}')) |> 
+  select(-Genus, -Species)
+
+poor_removed |> 
+  bind_rows(summarize(poor_removed, .by='Name', across(-Year, \(x) (sum(x, na.rm=TRUE)))) |> 
+              mutate(Year='Total')) |> 
+  mutate(Pct=Removed/Total) |> 
+  pivot_wider(names_from='Name', values_from=c('Total', 'Removed', 'Pct'),
+              names_vary='slowest', names_glue='{Name}_{.value}') |> 
+  gt() |> 
+  sub_missing(missing_text='-') |> 
+  fmt_percent(columns=contains('Pct'), decimals=0) |> 
+  tab_spanner_delim('_') |> 
+  tab_header(title='Removal by year, selected species') |> 
+  tree_table_options(has_total_row=TRUE)
 ```
 
 ## Top genera planted
