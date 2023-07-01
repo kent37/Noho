@@ -223,7 +223,21 @@ center_summary |>
 
 
 ```{r downtown-map}
-make_map(center_trees, centers, centers$Sector, 'City centers')
+map=make_map(center_trees, centers, centers$Sector, 'City centers')
+
+# Hack in Leeds locations
+# leeds_locations = read_sf(here::here('Trees/Quadrant maps/Possible_tree_locations.gpkg'),
+#                           'Leeds_tree_locations') |> 
+#   st_transform(4326)
+# map = map |> 
+#     addCircleMarkers(data=leeds_locations, radius=5,
+#                      group='Locations',
+#                      stroke=FALSE, fillColor="#D95F02", fillOpacity=0.5) |> 
+#     addLayersControl(baseGroups=c('Street', 'Satellite'),
+#       overlayGroups=c('Trees', 'City centers', 'Locations'),
+#       options=layersControlOptions(collapsed=FALSE))
+
+map
 priority_tree_ids = union(priority_tree_ids, center_trees$tree_id)
 ```
 
