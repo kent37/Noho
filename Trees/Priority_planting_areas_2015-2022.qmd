@@ -164,6 +164,10 @@ geocoding the tree addresses. This locates most trees on the building at the
 tree address, rather than in the correct location - typically on the 
 right-of-way.
 
+Of the `r comma(nrow(planted))` trees planted in this period, 
+this report only considers the `r comma(sum(map_data$count))` surviving trees.
+Location data for the `r sum(planted$dead)` removed trees was not available.
+
 ## Proximity to downtown centers
 
 ```{r downtown}
