@@ -58,11 +58,13 @@ summarize_names = function(common_names) {
     paste(collapse='<br>')
 }
 
+# Summarize planting by location
 map_data = planted |> 
   filter(!dead) |> 
   group_by(Num, Street, Ward) |> 
   summarize(count=n(),
             name_label=summarize_names(`Common Name`),
+            Location=str_c(sort(unique(Location)), collapse=','),
             .groups='drop'
   ) |> 
   mutate(address=str_to_title(if_else(is.na(Num), Street, paste(Num, Street))),

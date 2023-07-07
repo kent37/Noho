@@ -175,12 +175,13 @@ qmile_raw = read_sheet(
   'https://docs.google.com/spreadsheets/d/1BPOBrVKXX7ROS-gORve0q3MeRDxBtJ7s4KPwdU4Kl4I/edit#gid=0',
   sheet=1, skip=1,
   col_types='c'
-)
+) |> mutate(Sector=factor(Sector))
 
 qmile_goals = qmile_raw |> 
   filter(`Ownership:         R/S/?/B/C`=='R') |> # Right-of-way only per Molly
   mutate(Count=parse_number(replace_na(`Number of  Trees`, '1'))) |> 
   summarize(.by=Sector, Sites=sum(Count)) |> 
+  complete(Sector, fill=list(Sites=0)) |> 
   mutate(Neighborhood=case_match(str_sub(Sector, 1, 1),
                            'F' ~ 'Florence',
                            'N' ~ 'Northampton',
@@ -192,7 +193,9 @@ centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPo
   mutate(Neighborhood=factor(City), 
          Sector=factor(Code))
 
-center_trees = st_join(map_data, centers, left=FALSE)
+center_trees = map_data |> 
+  filter(str_detect(Location, 'RIGHT OF WAY|TREE BELT')) |> 
+  st_join(centers, left=FALSE)
 qmile_actual = center_trees |> 
   st_drop_geometry() |> 
   summarize(.by=c(Neighborhood, Sector), Planted=sum(count))
@@ -207,7 +210,8 @@ The Urban Forestry Commission has identified
 `r sum(qmile_goals$Sites)` possible planting locations in the public 
 right-of-way near
 the Northampton, Florence and Leeds city centers. To date,
-`r sum(qmile_actual$Planted)` trees have been planted in these regions.
+`r sum(qmile_actual$Planted)` trees have been planted in the right-of-way
+or tree belt in these regions.
 
 The downtown areas were further divided into 4-5 sectors. This table
 summarizes the planting per sector; the map shows the trees planted
@@ -217,11 +221,16 @@ in each sector.
 center_summary |> 
   select(Neighborhood, Sector, Sites, Planted) |> 
   gt(rowname_col='Sector', groupname_col='Neighborhood') |> 
-  summary_rows(groups=TRUE, columns=c(Sites, Planted), 
+  summary_rows(columns=c(Sites, Planted), 
                fns=list(Total=~sum(.)), decimals=0) |> 
   grand_summary_rows(columns=c(Sites, Planted), 
-               fns=list(Total=~sum(.)), decimals=0) |> 
+               fns=list(`Grand Total`=~sum(.)), decimals=0) |> 
   tab_header(title='Downtown trees planted 2015-2022') |> 
+  tab_style(locations=list(cells_stub_summary(), cells_summary()),
+            style=list(cell_borders(sides='bottom', weight=px(2)),
+                       cell_text(weight='bold'))) |>
+  tab_style(locations=list(cells_stub_grand_summary(), cells_grand_summary()),
+            style=list(cell_text(weight='bolder'))) |>
   tab_source_note(source_text)
 ```
 
@@ -367,7 +376,7 @@ Several low-income areas have been identified for planting including
 the streets 
 `r low_income_streets |> sort() |> str_to_title() |> str_flatten_comma(', and ')`.
 
-These areas have had trees planted:
+`r sum(low_income_trees$count)` trees have been planted in these areas:
 
 ```{r low-income-table}
 low_income_trees |> 
@@ -490,7 +499,7 @@ businesses = tribble(
 
 business_locations = extra_locations |> filter(Category=='Business')
 business_trees = businesses |> 
-  inner_join(map_data) |> 
+  inner_join(map_data |> select(-Location)) |> 
   st_as_sf()
 priority_tree_ids = union(priority_tree_ids, business_trees$tree_id)
 ```
@@ -499,7 +508,7 @@ Several businesses have been identified as having possible planting sites
 including
 `r businesses$Location |> sort() |> unique() |> str_flatten_comma(', and ')`
 
-These businesses have had trees planted:
+`r sum(business_trees$count)` trees have been planted at these businesses:
 
 ```{r business-table}
 business_trees |> 
