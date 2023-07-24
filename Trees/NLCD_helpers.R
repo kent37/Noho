@@ -21,7 +21,10 @@ noho = st_read(
 # Read a raster layer and clip to a boundary
 read_layer = function(path, mask_layer=noho) {
   rast = rast(path)
-  clipped = mask(rast, vect(mask_layer))
+  
+  # Cropping to extent is fast, do that first
+  cropped = crop(rast, vect(mask_layer))
+  clipped = mask(cropped, vect(mask_layer))
   clipped
 }
 
@@ -62,6 +65,23 @@ clip_and_count_layer_slow = function(rast, mask) {
     as_tibble(.name_repair='universal') %>% 
     rename(value=`...1`)
   counts
+}
+
+# Clip all layers to a mask and report the mean value
+clip_and_mean_all = function(mask) {
+  lc_means = 
+    map_dbl(lc_layers, 
+        ~clip_and_mean_layer(.x, mask))
+
+  tibble(Year = as.integer(str_extract(names(lc_means), '\\d{4}')),
+         Coverage=lc_means)
+}
+
+# Clip a single layer to a mask and report the mean value
+# as a fractional percent
+clip_and_mean_layer = function(rast, mask) {
+  clipped = mask(rast, vect(mask))
+  mean(values(clipped), na.rm=TRUE)/100
 }
 
 # Make a tibble with land cover values, names and colors

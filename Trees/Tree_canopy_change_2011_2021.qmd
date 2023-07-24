@@ -1,0 +1,251 @@
+---
+title: "Northampton tree canopy change 2011-2021"
+author: "Kent Johnson"
+toc: true
+callout-icon: false
+format:
+  html:
+    embed-resources: true
+    header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+    link-external-newwindow: true
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+<style>
+table.gt_table {
+    color: var(--quarto-body-color);
+    font-size: 14px;
+}
+</style>
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(gt)
+library(scales)
+library(sf)
+library(terra)
+
+source(here::here('Trees/NLCD_helpers.R'))
+```
+
+```{r read_data}
+# Suppress messages from name repair
+options("rlib_name_repair_verbosity"="quiet")
+
+# Read the raw data and increase the resolution
+lc_files = list.files(here::here('data/nlcd_tcc_CONUS_all'), 
+                      pattern = '^nlcd_tcc_conus_\\d{4}_v2021-4.tif$',
+                      full.names=TRUE, recursive=TRUE)
+
+res_bump = 4
+lc_layers = 
+  map(set_names(lc_files, basename(lc_files)), 
+          ~read_layer(.x) %>% disagg(res_bump), 
+          .progress='Reading layers')
+
+```
+
+```{r helpers}
+# Plot helpers
+theme_set(theme_minimal(base_size=12) + 
+            theme(legend.position='bottom', plot.title=element_text(face='bold')))
+NLCD_year_axis = scale_x_continuous(breaks=seq(2001, 2019, 3),
+                     minor_breaks=NULL)
+plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
+
+# Table helpers
+table_caption = md('Data: [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/) | Analysis: Kent S Johnson')
+
+```
+
+### Introduction
+
+This report uses data from the National Land Coverage Database (NLCD)
+to summarize tree canopy changes in Northampton, Mass. from
+2001 to 2019. 
+
+NLCD data was obtained from the 
+[Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
+An interactive viewer for the underlying data is available
+[here](https://www.mrlc.gov/viewer).
+
+The NLCD provides data on tree canopy coverage at 30 meter resolution.
+The percent of canopy coverage is reported for each 30 meter square,
+with data available for each year from 2011 to 2021.
+
+### Tree canopy in Northampton
+
+```{r noho_data}
+noho_coverage = clip_and_mean_all(noho)
+noho_max = max(noho_coverage$Coverage)
+noho_min = min(noho_coverage$Coverage)
+```
+
+This chart shows tree canopy coverage for the City as whole. 
+Overall coverage 
+is approximately 57% for the entire period 2011-2021. 
+
+Canopy coverage
+increased slightly from 2011-2013 to a high of
+`r percent(noho_max, accuracy=0.1)`, 
+then decreased to a low of 
+`r percent(noho_min, accuracy=0.1)` in 2021, a decline of just over 1%.
+
+```{r noho_table}
+text_anno = tibble(
+  Year=c(2013, 2021),
+  Coverage=c(noho_max, noho_min),
+  hjust=c(0, 1),
+  vjust=c(-0.5, 1.5)
+) |> 
+  mutate(label=paste(
+    c('Maximum canopy coverage:', 'Minimum canopy coverage:'),
+    percent(Coverage, accuracy=0.1)))
+
+ggplot(noho_coverage, aes(Year, Coverage)) +
+  geom_line(color='darkgreen', linewidth=1) +
+  geom_text(data=text_anno, aes(label=label, hjust=hjust, vjust=vjust)) +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL,
+                     limits=c(0.565, 0.5775),
+                     labels=label_percent(accuracy=0.01)) +
+  labs(x='Year', y='Tree canopy coverage (%)',
+       title='Northampton tree canopy coverage, 2011-2021',
+       caption=plot_caption)
+```
+
+---
+
+### Tree canopy by zoning category
+
+This chart show the tree canopy percent within five zoning categories
+aggregated from the City zoning. Unsurprisingly, there is considerable
+difference in tree canopy coverage across the different zoning 
+categories.
+
+```{r by_zoning}
+zoning = aggregated_zoning() |> 
+  st_transform(nlcd_crs)
+zone_coverage = pmap_dfr(zoning, function(Class, geometry) {
+  clip_and_mean_all(geometry) |> 
+    mutate(Class=Class, .before=1)
+})
+
+zone_labels = zone_coverage |> 
+  summarize(.by=Class, Year=2011.1, Coverage=max(Coverage))
+
+# Overall coverage by zone
+ggplot(zone_coverage, aes(Year, Coverage, color=Class, group=Class)) +
+  geom_line(linewidth=1) +
+  geom_text(data=zone_labels, aes(label=Class),
+            hjust=-0, vjust=-0.5, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL, limits=c(NA, 0.7),
+                     labels=label_percent(accuracy=1)) +
+  guides(color='none') +
+  labs(x='Year', y='Tree canopy coverage (%)',
+       title='Northampton tree canopy coverage by zoning category, 2011-2021',
+       caption=plot_caption)
+```
+
+The next chart shows the change in percent tree canopy 
+since the 2011 baseline, by zoning category.
+
+The canopy increase from 2011 to 2013 is mostly in the Rural and
+Suburban/Water supply zones. All zones have seen a decrease in
+canopy since 2013. The decrease is largest in the
+Business/industrial and Central business zones.
+
+```{r change_by_zone}
+# Change in coverage by zone
+zone_change = zone_coverage %>% 
+  arrange(Year) %>% 
+  group_by(Class) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
+  ungroup()
+
+zone_change_labels = tibble(
+  Class=zone_labels$Class,
+  Year=c(2017, 2016, 2017, 2016.4, 2020),
+  Change=c(-0.009, -0.018, -0.002, -0.0065, -0.011)
+)
+
+ggplot(zone_change, aes(Year, Change, color=Class, group=Class)) +
+  geom_line(linewidth=1) +
+  geom_text(data=zone_change_labels, aes(label=Class), 
+            hjust=0, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL,
+                     labels=label_percent(accuracy=0.1)) +
+  labs(x='Year', y='Change in tree canopy coverage (%)',
+       title='Change in tree canopy coverage by zoning category, 2011-2021',
+       caption=plot_caption) +
+  guides(color='none')
+```
+
+This table shows the canopy coverage in 2011 and 2021 by zone.
+
+```{r zone_change_table}
+zone_change |> 
+  filter(Year %in% c(2011, 2021)) |> 
+  select(-Change) |> 
+  pivot_wider(names_from='Year', values_from='Coverage') |> 
+  mutate(Change=`2021`-`2011`) |> 
+  arrange(desc(`2011`)) |> 
+  gt() |> 
+  fmt_percent(columns=-Class, decimals=1) |> 
+  cols_label(Class='Zoning class') |> 
+  tab_spanner('Year', c('2011', '2021')) |> 
+  tab_header(title='Change in tree canopy coverage by zoning category, 2011-2021') |> 
+  tab_source_note(table_caption)
+```
+
+### Zoning map
+
+This map shows the Northampton zoning categories as aggregated for this
+report.
+
+```{r zoning_map}
+map = leaflet(width='95%', height='600px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite')
+  
+zone_colors = RColorBrewer::brewer.pal(5, 'Set1') |> 
+  set_names(c("Urban", "Suburban/Water supply", "Rural", 
+              "Business/industrial", 
+              "Central business"))
+
+zones = all_zoning |> 
+  left_join(zoning_categories, by=c(NAME='Zone')) |> 
+  summarize(.by=Category, geometry = sf::st_union(geometry)) |> 
+  mutate(color=unname(zone_colors[Category]))
+
+#zones$label=str_glue_data(zones, '{Category} ({NAME})')
+
+  map %>%
+    addPolygons(data=zones |> st_transform(4326),
+                weight=1, group='Zones',
+                fillColor=~color,
+                fillOpacity=0.5,
+                label=~Category) %>% 
+    addPolygons(data=noho %>% st_transform(4326),
+                weight=1, fill=FALSE, color='grey') %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups='Zones',
+      options=layersControlOptions(collapsed=FALSE)) %>%
+    addLegend(colors=zone_colors, labels=names(zone_colors),
+              title='Aggregated zoning')
+
+```
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>
