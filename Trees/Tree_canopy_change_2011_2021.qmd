@@ -65,7 +65,7 @@ table_caption = md('Data: [Multi-Resolution Land Characteristics Consortium](htt
 
 This report uses data from the National Land Coverage Database (NLCD)
 to summarize tree canopy changes in Northampton, Mass. from
-2001 to 2019. 
+2001 to 2021. 
 
 NLCD data was obtained from the 
 [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
@@ -115,6 +115,102 @@ ggplot(noho_coverage, aes(Year, Coverage)) +
   labs(x='Year', y='Tree canopy coverage (%)',
        title='Northampton tree canopy coverage, 2011-2021',
        caption=plot_caption)
+```
+
+---
+
+### Tree canopy in city centers
+
+This chart shows the tree canopy coverage within the three city centers
+of Northampton. 
+
+Leeds center has the greatest amount of coverage, over 40%.
+Florence center has about 35% coverage while Northampton is about 20%.
+
+The map at the end of this report shows the extents of the three
+city centers.
+
+```{r city_centers}
+centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPolys') |> 
+  filter(!Code %in% c('L4', 'L5')) |> 
+  st_make_valid() |> 
+  st_transform(nlcd_crs) |> 
+  summarize(.by=City, geometry=st_union(geometry)) |> 
+  # Clean up Florence a bit
+  st_buffer(1) |> 
+  st_buffer(-1)
+
+center_coverage = pmap_dfr(centers, function(City, geometry) {
+  clip_and_mean_all(geometry) |> 
+    mutate(City=City, .before=1)
+})
+
+center_labels = center_coverage |> 
+  summarize(.by=City, Year=2011.1, Coverage=max(Coverage))
+
+# Overall coverage by center
+ggplot(center_coverage, aes(Year, Coverage, color=City, group=City)) +
+  geom_line(linewidth=1) +
+  geom_text(data=center_labels, aes(label=City),
+            hjust=-0, vjust=-0.5, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL,
+                     labels=label_percent(accuracy=1)) +
+  guides(color='none') +
+  labs(x='Year', y='Tree canopy coverage (%)',
+       title='Northampton tree canopy coverage in city centers, 2011-2021',
+       caption=plot_caption)
+```
+
+The next chart shows the change in percent tree canopy coverage in city centers
+since the 2011 baseline.
+
+Leeds is the only city center with increased canopy coverage from 2011 to 2021. 
+Coverage has decreased by almost 2% in Northampton and Florence.
+
+
+```{r change_by_center}
+# Change in coverage by center
+center_change = center_coverage %>% 
+  arrange(Year) %>% 
+  group_by(City) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
+  ungroup()
+
+center_change_labels = tibble(
+  City=center_labels$City,
+  Year=c(2017, 2017, 2017),
+  Change=c(-0.018, -0.002, 0.006)
+)
+
+ggplot(center_change, aes(Year, Change, color=City, group=City)) +
+  geom_line(linewidth=1) +
+  geom_text(data=center_change_labels, aes(label=City), 
+            hjust=0, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL,
+                     labels=label_percent(accuracy=0.1)) +
+  labs(x='Year', y='Change in tree canopy coverage (%)',
+       title='Change in tree canopy coverage in city centers, 2011-2021',
+       caption=plot_caption) +
+  guides(color='none')
+```
+
+This table shows the canopy coverage in 2011 and 2021 in the three city centers.
+
+```{r center_change_table}
+center_change |> 
+  filter(Year %in% c(2011, 2021)) |> 
+  select(-Change) |> 
+  pivot_wider(names_from='Year', values_from='Coverage') |> 
+  mutate(Change=`2021`-`2011`) |> 
+  arrange(desc(`2011`)) |> 
+  gt() |> 
+  cols_label(City='City center') |> 
+  fmt_percent(columns=-City, decimals=1) |> 
+  tab_spanner('Year', c('2011', '2021')) |> 
+  tab_header(title='Change in tree canopy coverage in city centers, 2011-2021') |> 
+  tab_source_note(table_caption)
 ```
 
 ---
@@ -203,13 +299,27 @@ zone_change |>
   tab_source_note(table_caption)
 ```
 
-### Zoning map
+### Canopy change map
 
-This map shows the Northampton zoning categories as aggregated for this
+This map shows the change in tree canopy percent from 2011 to 2021.
+Overlays show Northampton city centers and
+zoning categories as aggregated for this
 report.
 
 ```{r zoning_map}
-map = leaflet(width='95%', height='600px') %>% 
+tc_2011 = lc_layers$`nlcd_tcc_conus_2011_v2021-4.tif`
+# 254 is a "non-processing" area
+tc_2011[tc_2011==254] = NA
+
+tc_2021 = lc_layers$`nlcd_tcc_conus_2021_v2021-4.tif`
+tc_change = (tc_2021 - tc_2011) |> 
+  project('epsg:4326')
+tc_change[tc_change==0] = NA
+
+tc_colors = colorNumeric('PiYG', c(-100, 100), na.color=NA)
+tc_colors_rev = colorNumeric('PiYG', c(-100, 100), na.color=NA, reverse=TRUE)
+
+map = leaflet(width='95%', height='700px') %>% 
   setView(-72.667, 42.330, 12) %>% 
   addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
   addTiles(group='OpenStreetMap') %>% 
@@ -228,17 +338,28 @@ zones = all_zoning |>
 #zones$label=str_glue_data(zones, '{Category} ({NAME})')
 
   map %>%
+    addRasterImage(tc_change, colors=tc_colors, group='Change') |> 
     addPolygons(data=zones |> st_transform(4326),
-                weight=1, group='Zones',
+                weight=0.5, group='Zones',
+                color='grey',
                 fillColor=~color,
-                fillOpacity=0.5,
+                fillOpacity=0.1,
                 label=~Category) %>% 
+    addPolygons(data=centers |> st_transform(4326),
+                weight=1, color='black',
+                fill=FALSE, group='Centers') |> 
     addPolygons(data=noho %>% st_transform(4326),
                 weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(
       baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
-      overlayGroups='Zones',
+      overlayGroups=c('Change', 'Centers', 'Zones'),
       options=layersControlOptions(collapsed=FALSE)) %>%
+    # Hack to reverse the legend order from
+    #   https://stackoverflow.com/a/56334156/80626
+    addLegend(pal=tc_colors_rev, values=seq(-100, 100, 20),
+              labFormat = labelFormat(
+                transform = function(x) sort(x, decreasing = TRUE)),
+              title='Canopy change %') |> 
     addLegend(colors=zone_colors, labels=names(zone_colors),
               title='Aggregated zoning')
 

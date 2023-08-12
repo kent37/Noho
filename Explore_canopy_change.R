@@ -4,11 +4,11 @@ source(here::here('Trees/NLCD_helpers.R'))
 
 res_bump = 4
 
-tc_2021_path = "/Users/kent/Downloads/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2021_v2021-4/nlcd_tcc_conus_2021_v2021-4.tif"
+tc_2021_path = here::here("data/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2021_v2021-4/nlcd_tcc_conus_2021_v2021-4.tif")
 tc_2021 = read_layer(tc_2021_path) |> 
   disagg(res_bump)
 
-tc_2011_path = "/Users/kent/Downloads/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2011_v2021-4/nlcd_tcc_conus_2011_v2021-4.tif"
+tc_2011_path = here::here("data/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2011_v2021-4/nlcd_tcc_conus_2011_v2021-4.tif")
 tc_2011 = read_layer(tc_2011_path) |> 
   disagg(res_bump)
 
@@ -16,6 +16,13 @@ tc_2011 = read_layer(tc_2011_path) |>
 tc_2011[tc_2011==254] = NA
 
 tc_change = tc_2021-tc_2011
+range(tc_change)
+qplot(values(tc_change), binwidth=1)
+tc_changed = tc_change
+tc_changed[tc_changed==0] = NA
+writeRaster(tc_changed, 
+            here::here('data/NLCD_TCC_Noho/nlcd_tcc_noho_change_2011_2021.tif'),
+            overwrite=TRUE)
 
 mean(values(tc_2011), na.rm=TRUE) # 57.1%
 mean(values(tc_2021), na.rm=TRUE) # 56.5%
