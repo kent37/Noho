@@ -41,9 +41,18 @@ lc_files = list.files(here::here('data/nlcd_tcc_CONUS_all'),
                       full.names=TRUE, recursive=TRUE)
 
 res_bump = 4
+
+read_tree_layer = function(layer_path) {
+  layer = read_layer(layer_path)
+  
+  # Some layers have 254 values for NA. Treat them as 0
+  layer[layer==254] = 0
+  disagg(layer, res_bump)
+}
+
 lc_layers = 
   map(set_names(lc_files, basename(lc_files)), 
-          ~read_layer(.x) %>% disagg(res_bump), 
+          read_tree_layer, 
           .progress='Reading layers')
 
 ```
@@ -155,7 +164,7 @@ ggplot(center_coverage, aes(Year, Coverage, color=City, group=City)) +
   geom_text(data=center_labels, aes(label=City),
             hjust=-0, vjust=-0.5, fontface='bold') +
   scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
-  scale_y_continuous(minor_breaks=NULL,
+  scale_y_continuous(minor_breaks=NULL, limits=c(0, NA),
                      labels=label_percent(accuracy=1)) +
   guides(color='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
@@ -197,19 +206,26 @@ ggplot(center_change, aes(Year, Change, color=City, group=City)) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 2011 and 2021 in the three city centers.
+This table shows the canopy coverage in 2011 and 2021 in the three city centers and the change in percent and acres.
 
 ```{r center_change_table}
 center_change |> 
   filter(Year %in% c(2011, 2021)) |> 
   select(-Change) |> 
-  pivot_wider(names_from='Year', values_from='Coverage') |> 
-  mutate(Change=`2021`-`2011`) |> 
-  arrange(desc(`2011`)) |> 
+  pivot_wider(names_from='Year', 
+              values_from=c('Coverage', Area)) |> 
+  mutate(Change=`Coverage_2021`-`Coverage_2011`,
+         Acre_Change=Area_2021*Change) |> 
+  arrange(desc(`Coverage_2011`)) |> 
+  select(-starts_with('Area')) |> 
   gt() |> 
-  cols_label(City='City center') |> 
-  fmt_percent(columns=-City, decimals=1) |> 
-  tab_spanner('Year', c('2011', '2021')) |> 
+  cols_label(City='City center',
+             Change='Percent',
+             Acre_Change='Acres') |> 
+  fmt_percent(columns=-c(City, Acre_Change), decimals=1) |>
+  fmt_number(columns=Acre_Change, decimals=1) |> 
+  tab_spanner('Change', Change:Acre_Change, id='changes') |> 
+  tab_spanner_delim('_', starts_with('Coverage')) |> 
   tab_header(title='Change in tree canopy coverage in city centers, 2011-2021') |> 
   tab_source_note(table_caption)
 ```
@@ -289,13 +305,20 @@ This table shows the canopy coverage in 2011 and 2021 by zone.
 zone_change |> 
   filter(Year %in% c(2011, 2021)) |> 
   select(-Change) |> 
-  pivot_wider(names_from='Year', values_from='Coverage') |> 
-  mutate(Change=`2021`-`2011`) |> 
-  arrange(desc(`2011`)) |> 
+  pivot_wider(names_from='Year', 
+              values_from=c('Coverage', Area)) |> 
+  mutate(Change=`Coverage_2021`-`Coverage_2011`,
+         Acre_Change=Area_2021*Change) |> 
+  arrange(desc(`Coverage_2011`)) |> 
+  select(-starts_with('Area')) |> 
   gt() |> 
-  fmt_percent(columns=-Class, decimals=1) |> 
-  cols_label(Class='Zoning class') |> 
-  tab_spanner('Year', c('2011', '2021')) |> 
+  cols_label(Class='Zoning class',
+             Change='Percent',
+             Acre_Change='Acres') |> 
+  fmt_percent(columns=-c(Class, Acre_Change), decimals=1) |>
+  fmt_number(columns=Acre_Change, decimals=1) |> 
+  tab_spanner('Change', Change:Acre_Change, id='changes') |> 
+  tab_spanner_delim('_', starts_with('Coverage')) |> 
   tab_header(title='Change in tree canopy coverage by zoning category, 2011-2021') |> 
   tab_source_note(table_caption)
 ```

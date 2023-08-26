@@ -69,19 +69,22 @@ clip_and_count_layer_slow = function(rast, mask) {
 
 # Clip all layers to a mask and report the mean value
 clip_and_mean_all = function(mask) {
-  lc_means = 
-    map_dbl(lc_layers, 
-        ~clip_and_mean_layer(.x, mask))
-
-  tibble(Year = as.integer(str_extract(names(lc_means), '\\d{4}')),
-         Coverage=lc_means)
+  map_dfr(lc_layers, 
+          ~clip_and_mean_layer(.x, mask)) |> 
+    mutate(Year = as.integer(
+      str_extract(names(lc_layers), '\\d{4}')))
 }
 
-# Clip a single layer to a mask and report the mean value
+# Clip a single layer to a mask and report the 
+# number of acres in the mask and the mean value
 # as a fractional percent
 clip_and_mean_layer = function(rast, mask) {
   clipped = mask(rast, vect(mask))
-  mean(values(clipped), na.rm=TRUE)/100
+  tibble(
+    Coverage=mean(values(clipped), na.rm=TRUE)/100,
+    Area = sum(!is.na(values(clipped)))
+      * acre_per_raster / res_bump^2
+  )
 }
 
 # Make a tibble with land cover values, names and colors
