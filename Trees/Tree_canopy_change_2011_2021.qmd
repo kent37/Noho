@@ -68,6 +68,34 @@ plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
 # Table helpers
 table_caption = md('Data: [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/) | Analysis: Kent S Johnson')
 
+fmt_area = function(x) {
+  if_else(x>=100, scales::number(x, accuracy=1, big.mark=','), scales::number(x, 0.1))
+}
+change_table = function(changes, desc, ...) {
+  changes |> 
+    filter(Year %in% c(2011, 2021)) |> 
+    select(-Change) |> 
+    pivot_wider(names_from='Year', names_glue='{Year}_Percent',
+                values_from=c('Coverage')) |> 
+    mutate(Change=`2021_Percent`-`2011_Percent`,
+           Acre_Change=Area*Change) |> 
+    mutate(`2011_Acres`=Area*`2011_Percent`, .before='2011_Percent') |> 
+    mutate(`2021_Acres`=Area*`2021_Percent`, .before='2021_Percent') |> 
+    arrange(desc(`2011_Percent`)) |> 
+    gt() |> 
+    cols_label(Change='Percent',
+               Acre_Change='Acres',
+               Area=html('Total area<br>(acres)'),
+               ...) |>
+    fmt_percent(columns=c(Change, ends_with('Percent')), decimals=1) |>
+    fmt(columns=c(Area, Acre_Change, ends_with('Acres')), fns=fmt_area) |> 
+    tab_spanner('Change', Change:Acre_Change, id='changes') |> 
+    tab_spanner_delim('_', starts_with('2011')) |> 
+    tab_spanner_delim('_', starts_with('2021')) |> 
+    tab_spanner('Coverage', columns=`2011_Acres`:`2021_Percent`) |> 
+    tab_header(title=str_glue('Change in tree canopy coverage {desc}, 2011-2021')) |> 
+    tab_source_note(table_caption)
+}
 ```
 
 ### Introduction
@@ -133,27 +161,11 @@ acres for the entire city.
 ```{r noho_table}
 noho_change = noho_coverage %>% 
   arrange(Year) %>% 
-  mutate(Change = Coverage-Coverage[1]) %>% 
+  mutate(Change = Coverage-Coverage[1]) |> 
+  mutate(City='Northampton', .before=1) %>% 
   ungroup()
 
-noho_change |> 
-  filter(Year %in% c(2011, 2021)) |> 
-  select(-Change) |> 
-  pivot_wider(names_from='Year', 
-              values_from=c('Coverage', Area)) |> 
-  mutate(Change=`Coverage_2021`-`Coverage_2011`,
-         Acre_Change=Area_2021*Change) |> 
-  arrange(desc(`Coverage_2011`)) |> 
-  select(-starts_with('Area')) |> 
-  gt() |> 
-  cols_label(Change='Percent',
-             Acre_Change='Acres') |> 
-  fmt_percent(columns=-Acre_Change, decimals=1) |>
-  fmt_number(columns=Acre_Change, decimals=0) |> 
-  tab_spanner('Change', Change:Acre_Change, id='changes') |> 
-  tab_spanner_delim('_', starts_with('Coverage')) |> 
-  tab_header(title='Change in tree canopy coverage in Northampton, 2011-2021') |> 
-  tab_source_note(table_caption)
+change_table(noho_change, 'in Northampton', City='')
 ```
 
 ---
@@ -238,25 +250,7 @@ ggplot(center_change, aes(Year, Change, color=City, group=City)) +
 This table shows the canopy coverage in 2011 and 2021 in the three city centers and the change in percent and acres.
 
 ```{r center_change_table}
-center_change |> 
-  filter(Year %in% c(2011, 2021)) |> 
-  select(-Change) |> 
-  pivot_wider(names_from='Year', 
-              values_from=c('Coverage', Area)) |> 
-  mutate(Change=`Coverage_2021`-`Coverage_2011`,
-         Acre_Change=Area_2021*Change) |> 
-  arrange(desc(`Coverage_2011`)) |> 
-  select(-starts_with('Area')) |> 
-  gt() |> 
-  cols_label(City='City center',
-             Change='Percent',
-             Acre_Change='Acres') |> 
-  fmt_percent(columns=-c(City, Acre_Change), decimals=1) |>
-  fmt_number(columns=Acre_Change, decimals=1) |> 
-  tab_spanner('Change', Change:Acre_Change, id='changes') |> 
-  tab_spanner_delim('_', starts_with('Coverage')) |> 
-  tab_header(title='Change in tree canopy coverage in city centers, 2011-2021') |> 
-  tab_source_note(table_caption)
+change_table(center_change, 'in city centers', City='City center')
 ```
 
 ---
@@ -331,25 +325,7 @@ ggplot(zone_change, aes(Year, Change, color=Class, group=Class)) +
 This table shows the canopy coverage in 2011 and 2021 by zone.
 
 ```{r zone_change_table}
-zone_change |> 
-  filter(Year %in% c(2011, 2021)) |> 
-  select(-Change) |> 
-  pivot_wider(names_from='Year', 
-              values_from=c('Coverage', Area)) |> 
-  mutate(Change=`Coverage_2021`-`Coverage_2011`,
-         Acre_Change=Area_2021*Change) |> 
-  arrange(desc(`Coverage_2011`)) |> 
-  select(-starts_with('Area')) |> 
-  gt() |> 
-  cols_label(Class='Zoning class',
-             Change='Percent',
-             Acre_Change='Acres') |> 
-  fmt_percent(columns=-c(Class, Acre_Change), decimals=1) |>
-  fmt_number(columns=Acre_Change, decimals=1) |> 
-  tab_spanner('Change', Change:Acre_Change, id='changes') |> 
-  tab_spanner_delim('_', starts_with('Coverage')) |> 
-  tab_header(title='Change in tree canopy coverage by zoning category, 2011-2021') |> 
-  tab_source_note(table_caption)
+change_table(zone_change, 'by zoning category', Class='Zoning class')
 ```
 
 ### Canopy change map
