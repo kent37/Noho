@@ -69,7 +69,7 @@ plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
 table_caption = md('Data: [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/) | Analysis: Kent S Johnson')
 
 fmt_area = function(x) {
-  if_else(x>=100, scales::number(x, accuracy=1, big.mark=','), scales::number(x, 0.1))
+  if_else(x>=100, number(x, accuracy=1, big.mark=','), number(x, 0.1))
 }
 change_table = function(changes, desc, ...) {
   changes |> 
@@ -119,17 +119,25 @@ with data available for each year from 2011 to 2021.
 noho_coverage = clip_and_mean_all(noho)
 noho_max = max(noho_coverage$Coverage)
 noho_min = min(noho_coverage$Coverage)
+noho_net_change = noho_coverage$Coverage[1]-noho_min
 ```
 
-This chart shows tree canopy coverage for the City as whole. 
-Overall coverage 
-is approximately 57% for the entire period 2011-2021. 
+Overall tree canopy coverage in Northampton 
+was approximately 57% for the entire period 2011-2021. 
 
 Canopy coverage
-increased slightly from 2011-2013 to a **high of
-`r percent(noho_max, accuracy=0.1)`**, 
+increased slightly from 
+**`r percent(noho_coverage$Coverage[1], accuracy=0.1)` in 2011** to a **high of
+`r percent(noho_max, accuracy=0.1)` in 2023**, 
 then decreased to a **low of 
-`r percent(noho_min, accuracy=0.1)`** in 2021, a **decline of just over 1%**.
+`r percent(noho_min, accuracy=0.1)` in 2021**, 
+a **decline of just over 1%**. 
+
+Canopy coverage **declined by
+`r percent(noho_net_change, accuracy=0.1)` from 2011 to 2021, a loss of
+`r number(noho_net_change*noho_acres, accuracy=1)` acres.**
+
+This chart shows tree canopy coverage for the City as whole. 
 
 ```{r noho_chart}
 text_anno = tibble(
