@@ -128,7 +128,7 @@ was approximately 57% for the entire period 2011-2021.
 Canopy coverage
 increased slightly from 
 **`r percent(noho_coverage$Coverage[1], accuracy=0.1)` in 2011** to a **high of
-`r percent(noho_max, accuracy=0.1)` in 2023**, 
+`r percent(noho_max, accuracy=0.1)` in 2013**, 
 then decreased to a **low of 
 `r percent(noho_min, accuracy=0.1)` in 2021**, 
 a **decline of just over 1%**. 
