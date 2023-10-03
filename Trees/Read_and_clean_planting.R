@@ -1,6 +1,7 @@
 # Read and clean Noho tree planting data
 library(tidyverse)
 library(googlesheets4)
+source(here::here('Trees/Binomial_name.R'))
 
 planted_raw = read_sheet(
   'https://docs.google.com/spreadsheets/d/1rIJKxHEv54ULyM4BhTkrGKDITdbv34X5bEDFp6gRx_4/edit#gid=1562980960',
@@ -27,21 +28,26 @@ planted = planted |>
     Species == "M ?" ~ "Malus spp.",
     Genus=='Amelanchier' & Species == 'grandiflora' ~ 'Amelanchier grandiflora',
     Genus=='Amelanchier' & Species == 'laevis' ~ 'Amelanchier laevis',
-    TRUE ~ `Scientific Name`
+    `Scientific Name`=='TIlia tomentosa Sterling®' ~ 'Tilia tomentosa Sterling®',
+    TRUE ~ str_replace_all(`Scientific Name`, c('×'='x', 'tulipfera'='tulipifera'))
   ))
 
-# To do - create binomial names
 
-# Fill in species, genus and family for the dead trees
+# Fill in species, genus, family and scientific name for the dead trees
 planted = local({
   living = planted |> filter(!dead)
   dead = planted |> 
     filter(dead) |> 
-    select(-Species, -Genus, -Family)
+    select(-Species, -Genus, -Family, -`Scientific Name`)
   
   species_lookup = living |> 
-    select(`Common Name`, Species, Genus, Family) |> 
+    select(`Common Name`, Species, Genus, Family, `Scientific Name`) |> 
     unique()
+  
+  # Not all common names uniquely identify the species, for example
+  # three different species of serviceberry all have the same
+  # common name. Here we just pick one, what else can we do??
+  species_lookup = species_lookup[!duplicated(species_lookup$`Common Name`), ]
   
   # Fix some different spellings
   dead = dead |> 
@@ -62,6 +68,10 @@ planted = local({
   # Put it all back together
   bind_rows(living, dead)
 })
+
+# Now we can add binomial name
+planted = planted |> 
+  mutate(Binomial = binomial_name(`Scientific Name`))
 
 # Locations
 planting_locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 

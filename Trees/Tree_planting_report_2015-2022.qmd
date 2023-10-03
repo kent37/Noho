@@ -136,9 +136,7 @@ ggplot(aes(Year, value, fill=name)) +
        caption=source_text)
 ```
 
-## Top species planted
-
-```{r yearly_species}
+```{r top_x_functions}
 top_x_counts = function(col) {
   top_x = planted %>% 
     count({{col}}, sort=TRUE) %>% 
@@ -202,84 +200,8 @@ top_x_chart = function(counts, col_name) {
          subtitle=str_glue('Top ten {col_name} planted'),
          caption=source_text)
 }
-
-counts = top_x_counts(Species)
-top_x_table(counts, 'species')
-top_x_chart(counts, 'species')
 ```
 
-## Survival by species
-
-```{r survival}
-top_species = planted %>% 
-  count(Species, sort=TRUE) %>% 
-  pull(Species) %>% head(10)
-
-survival = planted |> 
-  filter(Species %in% top_species) |> 
-  group_by(Species) |> 
-  summarize(Total=n(),
-            Removed_Pct=int_pct(mean(dead)), 
-            Removed_Count=sum(dead),
-            pct = mean(!dead),
-            Remaining_Pct=int_pct(pct),
-            Remaining_Count=sum(!dead)) |> 
-  arrange(desc(pct)) |> 
-  select(-pct)
-
-gt(survival) %>% 
-  tab_header(title=str_glue('Species planted and survived 2015-2022'),
-             subtitle=str_glue('Top ten species planted')) %>% 
-  tab_spanner_delim('_', columns=3:6) |> 
-  tree_table_options()
-
-survival |> 
-  select(Species, Remaining=Remaining_Count, Removed=Removed_Count) |> 
-  mutate(Species=factor(Species, levels=Species)) |> 
-  pivot_longer(cols=Remaining:Removed) |> 
-  ggplot(aes(Species, value, fill=name)) +
-    geom_col() +
-    scale_fill_manual('', values = survival_colors) +
-    labs(title='Top species planted and subsequently removed 2015-2022',
-         y='Number of trees planted',
-         caption=source_text)
-
-# Yearly planting and survival of the top three failures
-poor_species = survival |> 
-  slice(n()-0:2) |> 
-  pull(Species)
-
-poor_removed = planted |> 
-  filter(Species %in% poor_species) |> 
-  summarize(.by=c(Year, Genus, Species), 
-            Total=n(), 
-            Removed=sum(dead)) |> 
-  arrange(Year) |> 
-  mutate(Year=as.character(Year), 
-         Name=str_glue('{Genus} {Species}')) |> 
-  select(-Genus, -Species)
-
-poor_removed |> 
-  bind_rows(summarize(poor_removed, .by='Name', across(-Year, \(x) (sum(x, na.rm=TRUE)))) |> 
-              mutate(Year='Total')) |> 
-  mutate(Pct=Removed/Total) |> 
-  pivot_wider(names_from='Name', values_from=c('Total', 'Removed', 'Pct'),
-              names_vary='slowest', names_glue='{Name}_{.value}') |> 
-  gt() |> 
-  sub_missing(missing_text='-') |> 
-  fmt_percent(columns=contains('Pct'), decimals=0) |> 
-  tab_spanner_delim('_') |> 
-  tab_header(title='Removal by year, selected species') |> 
-  tree_table_options(has_total_row=TRUE)
-```
-
-## Top genera planted
-
-```{r yearly_genera}
-counts = top_x_counts(Genus)
-top_x_table(counts, 'genera')
-top_x_chart(counts, 'genera')
-```
 
 ```{r top_all_functions}
 count_top_all <- function(column) {
@@ -333,6 +255,106 @@ top_all_chart <- function(top_all_count, column, name) {
       subtitle=str_glue('Top ten {name} overall'), caption=source_text) +
     theme_minimal(base_size=12)
 }
+```
+
+## Top species planted
+
+```{r yearly_species}
+counts = top_x_counts(Binomial)
+top_x_table(counts, 'species')
+top_x_chart(counts, 'species')
+```
+
+## Change in top species
+
+The percentages of most of the top species in the urban forest 
+have declined as other species have been planted. 
+Of the top ten species, only
+_Gleditsia triacanthos_ shows a small
+increase in percentage.
+
+A general guideline is that an urban forest should contain no more than
+10% of any one species. In the 2015 survey, _Acer rubrum_ nearly reached
+this value, but planting in other families has decreased the percentage of
+_Acer rubrum_ below 10%.
+
+```{r change_in_species}
+top_all_count = count_top_all(Binomial) |> 
+  rename(Species=Binomial)
+top_all_table(top_all_count, 'species')
+top_all_chart(top_all_count, Species, 'species')
+```
+
+## Survival by species
+
+```{r survival}
+top_species = planted %>% 
+  count(Binomial, sort=TRUE) %>% 
+  pull(Binomial) %>% head(10)
+
+survival = planted |> 
+  filter(Binomial %in% top_species) |> 
+  group_by(Binomial) |> 
+  summarize(Total=n(),
+            Removed_Pct=int_pct(mean(dead)), 
+            Removed_Count=sum(dead),
+            pct = mean(!dead),
+            Remaining_Pct=int_pct(pct),
+            Remaining_Count=sum(!dead)) |> 
+  arrange(desc(pct)) |> 
+  select(-pct)
+
+gt(survival) %>% 
+  tab_header(title=str_glue('Species planted and survived 2015-2022'),
+             subtitle=str_glue('Top ten species planted')) %>% 
+  tab_spanner_delim('_', columns=3:6) |> 
+  tree_table_options()
+
+survival |> 
+  select(Binomial, Remaining=Remaining_Count, Removed=Removed_Count) |> 
+  mutate(Binomial=factor(Binomial, levels=rev(Binomial))) |> 
+  pivot_longer(cols=Remaining:Removed) |> 
+  ggplot(aes(value, Binomial, fill=name)) +
+    geom_col() +
+    scale_fill_manual('', values = survival_colors) +
+    labs(title='Top species planted and subsequently removed 2015-2022',
+         y='Number of trees planted',
+         caption=source_text)
+
+# Yearly planting and survival of the top three failures
+poor_species = survival |> 
+  slice(n()-0:2) |> 
+  pull(Binomial)
+
+poor_removed = planted |> 
+  filter(Binomial %in% poor_species) |> 
+  summarize(.by=c(Year, Genus, Binomial), 
+            Total=n(), 
+            Removed=sum(dead)) |> 
+  arrange(Year) |> 
+  mutate(Year=as.character(Year)) |> 
+  select(-Genus)
+
+poor_removed |> 
+  bind_rows(summarize(poor_removed, .by='Binomial', across(-Year, \(x) (sum(x, na.rm=TRUE)))) |> 
+              mutate(Year='Total')) |> 
+  mutate(Pct=Removed/Total) |> 
+  pivot_wider(names_from='Binomial', values_from=c('Total', 'Removed', 'Pct'),
+              names_vary='slowest', names_glue='{Binomial}_{.value}') |> 
+  gt() |> 
+  sub_missing(missing_text='-') |> 
+  fmt_percent(columns=contains('Pct'), decimals=0) |> 
+  tab_spanner_delim('_') |> 
+  tab_header(title='Removal by year, selected species') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+## Top genera planted
+
+```{r yearly_genera}
+counts = top_x_counts(Genus)
+top_x_table(counts, 'genera')
+top_x_chart(counts, 'genera')
 ```
 
 ## Change in top genera
