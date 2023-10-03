@@ -27,8 +27,31 @@ library(leaflet)
 library(lubridate)
 library(scales)
 library(sf)
+```
 
+```{r data, include=FALSE}
+# New planting data
 source(here::here('Trees/Read_and_clean_planting.R'))
+
+# Existing inventory data
+source(here::here('Trees/Read_and_clean_inventory.R'))
+
+# Lookup table for family
+family_lookup = read_csv(
+  here::here('Trees/Family_lookup.csv'), show_col_types=FALSE,
+) |> 
+  deframe()
+
+# Add family columns to both data sets
+# For `planting`, this replaces the existing family
+# For `inventory`, it is a new column
+stopifnot(all(planted$Genus %in% names(family_lookup)))
+planted = planted |> 
+  rename(Family_orig=Family) |> 
+  mutate(Family = unname(family_lookup[Genus]))
+
+stopifnot(all(inventory$Genus %in% names(family_lookup)))
+inventory$Family = unname(family_lookup[inventory$Genus])
 ```
 
 ```{r chart_setup}
@@ -258,6 +281,60 @@ top_x_table(counts, 'genera')
 top_x_chart(counts, 'genera')
 ```
 
+```{r top_all_functions}
+count_top_all <- function(column) {
+  previous = inventory |> select({{column}})
+  current = planted |> 
+    filter(!dead) |>
+    select({{column}}) |>
+    bind_rows(previous)
+  top_all = current %>% 
+    count({{column}}, sort=TRUE) %>% 
+    pull({{column}}) %>% head(10)
+  
+  top_previous_count = previous %>% 
+    filter({{column}} %in% top_all) |> 
+    count({{column}}, name='Count') |> 
+    mutate({{column}}:=factor({{column}}), Date='2015', Percent=Count/nrow(previous))
+  
+  top_all_count = current %>% 
+    filter({{column}} %in% top_all) |> 
+    count({{column}}, name='Count') |> 
+    mutate({{column}}:=fct_reorder(factor({{column}}), Count, .fun=identity, .desc=TRUE),
+           Date='2022', Percent=Count/nrow(current)) |> 
+    bind_rows(top_previous_count)
+}
+
+top_all_table <- function(top_all_count, name) {
+  top_all_count |> 
+    pivot_wider(names_from='Date', values_from=c('Count', 'Percent'),
+                names_glue='{Date}_{.value}', names_vary='slowest',
+                names_sort=TRUE) |> 
+    mutate(`Change in percent`=`2022_Percent`-`2015_Percent`) |> 
+    arrange(desc(`2022_Count`)) |> 
+    gt() |> 
+    fmt_integer(columns=c(2, 4)) |> 
+    fmt_percent(columns=c(3, 5), decimals=0) |> 
+    fmt_percent(columns=6, decimals=1) |> 
+    tab_spanner_delim('_') |> 
+    tab_header(
+      title=str_glue('Top {name} as percent of total urban forest'),
+      subtitle=str_glue('Top ten {name} overall')) |> 
+    tree_table_options()
+}
+
+top_all_chart <- function(top_all_count, column, name) {
+  ggplot(top_all_count, aes(x=Date, y=Percent, color={{column}}, group={{column}}))  +
+    geom_line(linewidth=1) +
+    scale_y_continuous('Percent of total urban forest', labels=scales::percent) +
+    scale_color_brewer(palette="Paired") +
+    labs(
+      title=str_glue('Change in top {name} as percent of total urban forest'),
+      subtitle=str_glue('Top ten {name} overall'), caption=source_text) +
+    theme_minimal(base_size=12)
+}
+```
+
 ## Change in top genera
 
 The percentages of genus _Acer_, _Pinus_ and _Picea_ in the urban forest 
@@ -266,62 +343,42 @@ The percentage of _Quercus_ has
 only declined slightly because many were planted. _Tilia_ shows the greatest
 increase in percentage.
 
+A general guideline is that an urban forest should contain no more than
+20% of any one genus. _Acer_ is the only genus in Northampton that exceeds
+this value.
+
 ```{r change_in_genera}
-previous = read_sf(here::here(
-  'Shapefiles/shade_tree_data_package/data/trees.shp')) |> 
-  st_drop_geometry() |> 
-  transmute(Genus = str_split_i(SPP_BOT, ' ', 1))
-
-current = living |> select(Genus) |> bind_rows(previous)
-top_all = current %>% 
-  count(Genus, sort=TRUE) %>% 
-  pull(Genus) %>% head(10)
-
-top_previous_count = previous %>% 
-  filter(Genus %in% top_all) |> 
-  count(Genus, name='Count') |> 
-  mutate(Genus=factor(Genus), Date='2015', Percent=Count/nrow(previous))
-
-top_all_count = current %>% 
-  filter(Genus %in% top_all) |> 
-  count(Genus, name='Count') |> 
-  mutate(Genus=fct_reorder(factor(Genus), Count, .fun=identity, .desc=TRUE),
-         Date='2022', Percent=Count/nrow(current)) |> 
-  bind_rows(top_previous_count)
-
-top_all_count |> 
-  pivot_wider(names_from='Date', values_from=c('Count', 'Percent'),
-              names_glue='{Date}_{.value}', names_vary='slowest',
-              names_sort=TRUE) |> 
-  mutate(`Change in percent`=`2022_Percent`-`2015_Percent`) |> 
-  arrange(desc(`2022_Count`)) |> 
-  gt() |> 
-  fmt_integer(columns=c(2, 4)) |> 
-  fmt_percent(columns=c(3, 5), decimals=0) |> 
-  fmt_percent(columns=6, decimals=1) |> 
-  tab_spanner_delim('_') |> 
-  tab_header(title='Top genera as percent of total urban forest',
-             subtitle='Top ten genera overall') |> 
-  tree_table_options()
-
-ggplot(top_all_count, aes(x=Date, y=Percent, color=Genus, group=Genus))  +
-  geom_line(linewidth=1) +
-  scale_y_continuous('Percent of total urban forest', labels=scales::percent) +
-  scale_color_brewer(palette="Paired") +
-  labs(title='Change in top genera as percent of total urban forest',
-       subtitle='Top ten genera overall', caption=source_text) +
-  theme_minimal(base_size=12)
+top_all_count = count_top_all(Genus)
+top_all_table(top_all_count, 'genera')
+top_all_chart(top_all_count, Genus, 'genera')
 ```
 
 ## Top families planted
 
 ```{r yearly_families}
 counts = top_x_counts(Family)
-names(counts) = str_to_sentence(names(counts))
 top_x_table(counts, 'families')
 top_x_chart(counts, 'families')
 ```
 
+## Change in top families
+
+The percentages of families _Sapindaceae_, _Pinaceae_ and _Picea_ in the urban forest 
+have declined as other families have been planted. 
+The percentage of _Fagaceae_ has not changed
+because many were planted. _Fabaceae_ shows the greatest
+increase in percentage.
+
+A general guideline is that an urban forest should contain no more than
+30% of any one family. In the 2015 survey, _Sapindaceae_ exceeded
+this value, but planting in other families has decreased the percentage of
+_Sapindaceae_ below 30%.
+
+```{r change_in_families}
+top_all_count = count_top_all(Family)
+top_all_table(top_all_count, 'families')
+top_all_chart(top_all_count, Family, 'families')
+```
 ## Planting by sapling type
 
 ```{r by_type}

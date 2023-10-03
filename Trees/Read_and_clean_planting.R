@@ -14,36 +14,54 @@ planted = planted_raw |>
   mutate(Num=parse_number(Num),
          Year = year(mdy(`Date Planted`, quiet=TRUE)),
          Year = if_else(is.na(Year), parse_number(`Date Planted`), Year),
-         dead = is.na(Species))
+         dead = is.na(Species),
+         Genus = case_match(Genus, # Fix misspellings
+                             'Liquidamber' ~ 'Liquidambar',
+                             .default = Genus,
+                             ))
 
-# Fill in species, genus and family for the dead trees
-living = planted |> filter(!dead)
-dead = planted |> 
-  filter(dead) |> 
-  select(-Species, -Genus, -Family)
-
-species_lookup = living |> 
-  select(`Common Name`, Species, Genus, Family) |> 
-  unique()
-
-# Fix some different spellings
-dead = dead |> 
-  mutate(`Common Name` = case_match(`Common Name`,
-    "GINKGO BILOBA" ~ "GINKGO",
-    "LONDON PLANE \"EXCLAMATION\"" ~ "EXCLAMATION LONDONPLANE",
-    "LONDON PLANE TREE 'BLOODGOOD'" ~ "LONDON PLANE \"BLOODGOOD\"",
-    "PRINCETON GINKGO" ~ "GINKGO \"PRINCETON SENTRY\"",
-    "STREET KEEPER HONEY LOCUST" ~ "HONEY LOCUST \"STREET KEEPER\"",
-    .default=`Common Name`
+# Clean up some scientific names
+planted = planted |> 
+  mutate(`Scientific Name` = case_when(
+    Species == "A canadensis" ~ "Amelanchier canadensis",
+    Species == "M ?" ~ "Malus spp.",
+    Genus=='Amelanchier' & Species == 'grandiflora' ~ 'Amelanchier grandiflora',
+    Genus=='Amelanchier' & Species == 'laevis' ~ 'Amelanchier laevis',
+    TRUE ~ `Scientific Name`
   ))
 
-# Check
-stopifnot(all(dead$`Common Name` %in% species_lookup$`Common Name`))
+# To do - create binomial names
 
-dead = dead |> left_join(species_lookup)
-
-# Put it all back together
-planted = bind_rows(living, dead)
+# Fill in species, genus and family for the dead trees
+planted = local({
+  living = planted |> filter(!dead)
+  dead = planted |> 
+    filter(dead) |> 
+    select(-Species, -Genus, -Family)
+  
+  species_lookup = living |> 
+    select(`Common Name`, Species, Genus, Family) |> 
+    unique()
+  
+  # Fix some different spellings
+  dead = dead |> 
+    mutate(`Common Name` = case_match(`Common Name`,
+      "GINKGO BILOBA" ~ "GINKGO",
+      "LONDON PLANE \"EXCLAMATION\"" ~ "EXCLAMATION LONDONPLANE",
+      "LONDON PLANE TREE 'BLOODGOOD'" ~ "LONDON PLANE \"BLOODGOOD\"",
+      "PRINCETON GINKGO" ~ "GINKGO \"PRINCETON SENTRY\"",
+      "STREET KEEPER HONEY LOCUST" ~ "HONEY LOCUST \"STREET KEEPER\"",
+      .default=`Common Name`
+    ))
+  
+  # Check
+  stopifnot(all(dead$`Common Name` %in% species_lookup$`Common Name`))
+  
+  dead = dead |> left_join(species_lookup)
+  
+  # Put it all back together
+  bind_rows(living, dead)
+})
 
 # Locations
 planting_locations = read_sf(here::here('Shapefiles/Tree_locations.gpkg')) |> 
