@@ -29,7 +29,10 @@ planted = planted |>
     Genus=='Amelanchier' & Species == 'grandiflora' ~ 'Amelanchier grandiflora',
     Genus=='Amelanchier' & Species == 'laevis' ~ 'Amelanchier laevis',
     `Scientific Name`=='TIlia tomentosa Sterling®' ~ 'Tilia tomentosa Sterling®',
-    TRUE ~ str_replace_all(`Scientific Name`, c('×'='x', 'tulipfera'='tulipifera'))
+    TRUE ~ str_replace_all(`Scientific Name`, # Fix misspellings
+                           c('×'='x', 
+                             'tulipfera'='tulipifera',
+                             'tomemtosa'='tomentosa'))
   ))
 
 

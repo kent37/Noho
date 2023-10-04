@@ -174,6 +174,8 @@ top_x_table = function(x_counts, col_name) {
     gt() %>% 
     tab_header(title=str_glue('Tree {col_name} planted 2015-2022'),
                subtitle=str_glue('Top ten {col_name} planted')) %>% 
+    tab_style(style=cell_text(align='left'), 
+              locations=cells_column_labels(1)) |> 
     tree_table_options(has_total_row=TRUE)
 }
 
@@ -385,11 +387,13 @@ top_x_chart(counts, 'families')
 
 ## Change in top families
 
-The percentages of families _Sapindaceae_, _Pinaceae_ and _Picea_ in the urban forest 
+The percentages of families _Sapindaceae_ and _Pinaceae_
+in the urban forest 
 have declined as other families have been planted. 
-The percentage of _Fagaceae_ has not changed
-because many were planted. _Fabaceae_ shows the greatest
-increase in percentage.
+The percentage of _Fagaceae_ has not changed much
+because many were planted. 
+The percentages of _Rosaceae_, _Fabaceae_ and _Malvaceae_
+have increased due to significant numbers of new plantings.
 
 A general guideline is that an urban forest should contain no more than
 30% of any one family. In the 2015 survey, _Sapindaceae_ exceeded
