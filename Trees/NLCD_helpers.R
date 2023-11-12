@@ -91,7 +91,7 @@ clip_and_mean_layer = function(rast, mask) {
 make_land_cover_legend = function() {
   # Classes in the order we want to report them
   lc_classes = c("Developed",  "Forest", "Cultivated", "Water/Wetland",
-                 "Herbaceous/Shrub", "Other")
+                 "Herbaceous/Shrub", "Barren")
   # The full list is in a CSV file
   lc_names = read_csv(
     here::here('data/NLCD_Tree_and_Land/NLCD_landcover_legend.csv'), 

@@ -1,0 +1,473 @@
+---
+title: "Northampton land cover change 2001-2021"
+author: "Kent Johnson"
+toc: true
+callout-icon: false
+format:
+  html:
+    embed-resources: true
+    header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+    link-external-newwindow: true
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+<style>
+table.gt_table {
+    color: var(--quarto-body-color);
+    font-size: 14px;
+}
+</style>
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(ggsankey)
+library(gt)
+library(sf)
+library(terra)
+
+source(here::here('Trees/NLCD_helpers.R'))
+```
+
+```{r read_data}
+# Suppress messages from name repair
+options("rlib_name_repair_verbosity"="quiet")
+
+# Read the raw data and increase the resolution
+lc_files = list.files(here::here('data/NLCD_Land_Cover_2001-2021/'), 
+                      pattern = '^NLCD_\\d{4}_Land_Cover.*\\.tiff$',
+                      full.names=TRUE)
+
+res_bump = 4
+lc_layers = 
+  map(set_names(lc_files, basename(lc_files)), 
+          ~rast(.x) %>% disagg(res_bump), 
+          .progress='Reading layers')
+
+lc_2001 = lc_layers[[1]]
+lc_2021 = lc_layers[[9]]
+
+lost_forest_poly = st_read(here::here('Trees/Lost_forest_2001_2021.gpkg'),
+                           quiet=TRUE)
+
+```
+
+```{r helpers}
+# Plot helpers
+theme_set(theme_minimal(base_size=12) + theme(legend.position='bottom'))
+NLCD_year_axis = scale_x_continuous(breaks=c(seq(2001, 2019, 3), 2021),
+                     minor_breaks=NULL)
+plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
+
+plot_change_in_acres = function(lc_classes, where) {
+  lc_change = lc_classes %>% 
+  arrange(Year) %>% 
+  group_by(Class) %>% 
+  mutate(Change = Acres-Acres[1]) %>% 
+  ungroup()
+
+p = ggplot(lc_change, aes(Year, Change, color=Class)) +
+  geom_line(linewidth=1) +
+  scale_color_manual('', values=class_color_map) +
+  scale_y_continuous('Change in Land Cover (Acres)') +
+  NLCD_year_axis +
+  labs(title=str_glue('Land Cover Change in {where}, 2001-2021'),
+       subtitle='Change in acres from 2001 baseline',
+       caption=plot_caption)
+
+ggplotly(p)
+}
+
+# Get detailed change data for sankey chart and from/to table
+compute_change = function(mask) {
+  mask = vect(mask)
+  lc_change = 
+    tibble(`2001`=values(lc_2001 %>% mask(mask), mat=FALSE),
+           `2021`=values(lc_2021 %>% mask(mask), mat=FALSE)) %>% 
+    filter(!is.na(`2001`)) %>% 
+    mutate(`2001`=class_lookup[as.character(`2001`)],
+           `2021`=class_lookup[as.character(`2021`)]) %>% 
+    count(`2001`, `2021`, sort=TRUE) %>% 
+    mutate(Acres = acre_per_raster * n / res_bump^2)
+
+  lc_change  
+}
+
+# Nice from/to table
+change_table = function(lc_change, where) {
+  lc_change %>% 
+    filter(`2001` != `2021`) %>% 
+    mutate(Acres=round(Acres, 0)) %>% 
+    select(-n) %>% 
+    pivot_wider(names_from='2021', values_from='Acres', values_fill=0) %>% 
+    #janitor::adorn_totals(where=c('row', 'col')) %>% 
+    rename(`2001 Category`='2001') %>% 
+    gt() %>% 
+    tab_header(title=str_glue('Land cover change in {where}, 2001-2021'),
+               subtitle='Change in acres from 2001 land cover category to 2021 category') %>% 
+    tab_spanner('2021 Category', columns=-1) %>% 
+    tab_source_note(table_caption)
+}
+
+# Sankey chart based on computed changes
+sankey_plot = function(lc_change, where) {
+  
+  data = lc_change %>% 
+    filter(`2001` != `2021`) %>% 
+    make_long(`2001`, `2021`, value=Acres)
+  
+  ggplot(data, 
+         aes(x=x, next_x=next_x, node=node, next_node=next_node, 
+             value=value, label=node, fill=node)) +
+    geom_sankey() +
+    geom_sankey_label(show.legend=FALSE) +
+    scale_fill_manual('', values=class_color_map) +
+    theme_sankey(base_size = 12) +
+    labs(x = NULL, 
+         title=str_glue('Change in {where} land cover, 2001-2021'),
+         subtitle='Showing changes only',
+         caption=plot_caption)
+
+}
+# Table helpers
+table_caption = md('Data: [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/) | Analysis: Kent S Johnson')
+
+# Table showing acres in 2001 and 2021 with percent, change and pct change
+acres_table = function(lc_classes, where) {
+  lc_classes %>% 
+    filter(Year %in% c(2001, 2021)) %>% 
+    mutate(Percent=int_pct(Fraction)) %>% 
+    select(-n, -Fraction) %>%  
+    mutate(Acres=round(Acres, 0)) %>% 
+    pivot_wider(names_from=Year, 
+                values_from=c(Acres, Percent),
+                names_glue='{Year}_{.value}',
+                names_vary='slowest') %>% 
+    arrange(desc(`2021_Acres`)) |> 
+    mutate(
+      Change_Acres=`2021_Acres`-`2001_Acres`,
+      `Percent Change`=int_pct(Change_Acres/`2001_Acres`)) %>% 
+    gt(rowname_col='Class') %>% 
+    tab_spanner_delim('_') %>% 
+    fmt_number(decimals=0, columns=c(2, 4)) %>% 
+    tab_header(title=str_glue('Land Cover Acres in {where}, 2001-2021')) %>% 
+    tab_source_note(table_caption) %>%
+    opt_row_striping()
+}
+
+```
+
+### Introduction
+
+This report uses data from the National Land Coverage Database (NLCD)
+to summarize land cover changes in Northampton, Mass. from
+2001 to 2021. 
+
+NLCD data was obtained from the 
+[Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
+An interactive viewer for the underlying data is available
+[here](https://www.mrlc.gov/viewer).
+
+The NLCD provides data on land cover and land cover change at 30 meter resolution.
+Each 30m square is classified into one of 16 land coverage categories. 
+Data releases every three years, from 2001 to 2021, allow monitoring land cover changes at the resolution of the data.
+
+For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. See the [land cover table](#land-cover-classes) below for details.
+
+### Land cover in Northampton
+
+These tables and charts show land cover change for the City as a whole.
+
+#### Land cover totals
+
+The first table shows land cover for the City in acres and as a percent of
+total area, and the change in acreage from 2001 to 2021. 
+The "Percent change" column is the change in acreage as a percent of 
+acreage, not the change in percent of total acres.
+
+Northampton is nearly half forested land and more than one quarter 
+developed land. The changes is forested and developed land are relatively
+small compared to the total number of acres.
+
+```{r noho_table}
+noho_classes = clip_and_count_all(noho)
+acres_table(noho_classes, 'Northampton')
+```
+
+#### Land cover change
+
+```{r noho_change}
+change_summary = function(all_classes, class_name) {
+  val_2001 = all_classes |> 
+    filter(Year==2001, Class==class_name) |> 
+    pull(Acres)
+  val_2021 = all_classes |> 
+    filter(Year==2021, Class==class_name) |> 
+    pull(Acres)
+  val_2021-val_2001
+}
+
+forest_loss= -change_summary(noho_classes, 'Forest')
+dev_gain = change_summary(noho_classes, 'Developed')
+```
+
+This chart shows land cover change in acres since 2001.
+
+- Developed land has increased by `r round(dev_gain, 0)` acres.
+- Forested land has decreased by `r round(forest_loss, 0)` acres.
+- There has been a loss of cultivated land and an increase in 
+herbaceous and shrub land and barren land.
+
+```{r noho_chart}
+plot_change_in_acres(noho_classes, 'Northampton')
+```
+
+The chart above gives the impression that forest land has
+been developed and cultivated land has gone to herbaceous and shrub.
+The actual situation is not that simple.
+
+The sankey diagram below gives a more nuanced view, showing the "from" and 
+"to" flow of land cover change. It shows that some loss of forest
+land is due to development, but some forest land has also changed to herbaceous/shrub.
+Most of the lost cultivated land has been developed but
+some has been re-categorized as barren and small amounts changed
+to forest, herbaceous/shrub and wetland.
+
+```{r noho_chart2}
+noho_change_data = compute_change(noho)
+sankey_plot(noho_change_data, 'Northampton')
+```
+
+This table shows the numbers underlying the right side of the sankey diagram above.
+For acres that changed classification from 2001 to 2021, it shows the number of
+acres for each new classification.
+
+```{r}
+change_table(noho_change_data, 'Northampton')
+```
+
+The map below show where the land cover classification
+changed from forest in 2001 to something other than forest in 2021. 
+The changed areas are colored to show the 2021 classification.
+
+```{r noho_map}
+map_forest_loss(lost_forest_poly)
+```
+
+---
+
+### Land cover by zoning category
+
+These tabs show land cover change within zoning categories. 
+The categories aggregate the City zoning districts.
+
+The maps show the zoning districts in grey and the areas
+of lost forest cover in red.
+
+```{r tab_setup}
+class_zone_list = function(class) {
+  zoning_categories %>% 
+    filter(Category==class) %>% 
+    pull(Zone) %>% 
+    str_flatten_comma(last=' and ')
+}
+
+zoning = aggregated_zoning()
+```
+
+::: {.panel-tabset}
+
+### Rural
+
+Rural zones include zoning districts
+`r class_zone_list('Rural')`.
+
+```{r rural, results='asis'}
+class='Rural'
+zone = zoning %>% 
+  filter(Class==class)
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone)
+
+acres_table(zone_classes, class_text)
+plot_change_in_acres(zone_classes, class_text)
+
+change_data = compute_change(zone)
+sankey_plot(change_data, class_text)
+```
+
+```{r rural_change}
+change_table(change_data, class_text)
+```
+
+```{r rural_map}
+map_forest_loss(lost_forest_poly, 'Rural')
+```
+
+
+### Suburban residential
+
+Suburban residential includes zoning districts
+`r class_zone_list('Suburban/Water supply')`.
+
+```{r suburban, results='asis'}
+class='Suburban/Water supply'
+zone = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone)
+
+acres_table(zone_classes, class_text)
+plot_change_in_acres(zone_classes, class_text)
+
+change_data = compute_change(zone)
+sankey_plot(change_data, class_text)
+```
+
+```{r suburban_change}
+change_table(change_data, class_text)
+```
+
+```{r suburban_map}
+map_forest_loss(lost_forest_poly, 'Suburban/Water supply')
+```
+
+### Urban residential
+
+Urban residential includes zoning districts
+`r class_zone_list('Urban')`.
+
+```{r urban, results='asis'}
+class='Urban'
+zone = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone)
+
+acres_table(zone_classes, class_text)
+plot_change_in_acres(zone_classes, class_text)
+
+change_data = compute_change(zone)
+sankey_plot(change_data, class_text)
+```
+
+```{r urban_change}
+change_table(change_data, class_text)
+```
+
+```{r urban_map}
+map_forest_loss(lost_forest_poly, 'Urban')
+```
+
+### Business / Industrial
+
+Business/industrial includes zoning districts
+`r class_zone_list('Business/industrial')`.
+
+```{r Business_industrial, results='asis'}
+class='Business/industrial'
+zone = zoning %>% 
+  filter(Class==class) %>% 
+  as_Spatial()
+
+class_text = paste(class, 'zones')
+zone_classes = clip_and_count_all(zone)
+
+acres_table(zone_classes, class_text)
+plot_change_in_acres(zone_classes, class_text)
+
+change_data = compute_change(zone)
+sankey_plot(change_data, class_text)
+```
+
+```{r business_industrial_change}
+change_table(change_data, class_text)
+```
+
+```{r business_industrial_map}
+map_forest_loss(lost_forest_poly, 'Business/industrial')
+```
+
+### Central business districts
+
+Central business zones include zoning districts
+`r class_zone_list('Central business')`.
+
+These zones consist entirely of developed land; there is no
+change between 2001 and 2021.
+
+:::
+
+### Land cover classes
+
+For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. 
+This table shows the land cover categories in the NLCD and the 
+consolidated classes to which they have been assigned.
+Detailed descriptions of the NLCD categories are available
+[here](https://www.mrlc.gov/data/legends/national-land-cover-database-class-legend-and-description).
+
+```{r categories}
+legend %>% 
+  arrange(as.numeric(Class)) %>% 
+  select(`Reporting class`=Class, `NLCD category`=Legend) %>% 
+  group_by(`Reporting class`) %>% 
+  gt() %>% 
+  tab_header(title='Reporting classes for NLCD categories') %>% 
+  tab_options(
+    row_group.as_column = TRUE,
+    data_row.padding='4px',
+    table_body.hlines.width=0) 
+```
+
+### Zoning map
+
+This map shows the Northampton zoning categories as aggregated for this
+report.
+
+```{r zoning_map}
+map = leaflet(width='95%', height='600px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite')
+  
+zone_colors = RColorBrewer::brewer.pal(5, 'Set1') |> 
+  set_names(c("Urban", "Suburban/Water supply", "Rural", 
+              "Business/industrial", 
+              "Central business"))
+
+zones = all_zoning |> 
+  left_join(zoning_categories, by=c(NAME='Zone')) |> 
+  mutate(color=unname(zone_colors[Category]))
+
+zones$label=str_glue_data(zones, '{Category} ({NAME})')
+
+  map %>%
+    addPolygons(data=zones |> st_transform(4326),
+                weight=1, group='Zones',
+                fillColor=~color,
+                fillOpacity=0.5,
+                label=~label) %>% 
+    addPolygons(data=noho %>% st_transform(4326),
+                weight=1, fill=FALSE, color='grey') %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups='Zones',
+      options=layersControlOptions(collapsed=FALSE)) %>%
+    addLegend(colors=zone_colors, labels=names(zone_colors),
+              title='Aggregated zoning')
+
+```
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>

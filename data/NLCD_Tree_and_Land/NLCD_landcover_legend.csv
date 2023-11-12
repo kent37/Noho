@@ -1,6 +1,6 @@
 # Augmented version of NLCD_landcover_legend_2018_12_17_cE3J3qNGK7bbzFDvKwex.csv,,
 Value,Legend,Class
-0,Unclassified,Other
+0,Unclassified,Barren
 1,,
 2,,
 3,,
@@ -12,7 +12,7 @@ Value,Legend,Class
 9,,
 10,,
 11,Open Water,Water/Wetland
-12,Perennial Snow/Ice,Other
+12,Perennial Snow/Ice,Barren
 13,,
 14,,
 15,,
@@ -31,7 +31,7 @@ Value,Legend,Class
 28,,
 29,,
 30,,
-31,Barren Land,Other
+31,Barren Land,Barren
 32,,
 33,,
 34,,
