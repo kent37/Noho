@@ -50,6 +50,11 @@ lc_2001 = lc_layers[[1]]
 lc_2021 = lc_layers[[9]]
 
 lost_forest_poly = st_read(here::here('Trees/Lost_forest_2001_2021.gpkg'),
+                           layer='Lost_forest_2001_2021',
+                           quiet=TRUE)
+
+lost_cultivation_poly = st_read(here::here('Trees/Lost_forest_2001_2021.gpkg'),
+                           layer='Lost_cultivated',
                            quiet=TRUE)
 
 ```
@@ -172,7 +177,8 @@ An interactive viewer for the underlying data is available
 
 The NLCD provides data on land cover and land cover change at 30 meter resolution.
 Each 30m square is classified into one of 16 land coverage categories. 
-Data releases every three years, from 2001 to 2021, allow monitoring land cover changes at the resolution of the data.
+Data releases every two-to-three years, from 2001 to 2021, 
+allow monitoring land cover changes at the resolution of the data.
 
 For this report, the sixteen land cover categories in the NLCD were consolidated to six classes. See the [land cover table](#land-cover-classes) below for details.
 
@@ -248,12 +254,29 @@ acres for each new classification.
 change_table(noho_change_data, 'Northampton')
 ```
 
-The map below show where the land cover classification
+The map below shows where the land cover classification
 changed from forest in 2001 to something other than forest in 2021. 
 The changed areas are colored to show the 2021 classification.
 
+A separate layer shows where the classification changed from cultivated
+in 2001 to something other than cultivated in 2021.
+
 ```{r noho_map}
-map_forest_loss(lost_forest_poly)
+map = map_forest_loss(lost_forest_poly)
+lost_cultivation_poly$Color = 
+  unname(class_color_map[as.character(lost_cultivation_poly$Class)])
+
+map %>%
+    addPolygons(data=lost_cultivation_poly %>% st_transform(4326), 
+                stroke=FALSE, group='Cultivation loss',
+                fillColor=~Color,
+                fillOpacity=0.8,
+                label=~Class) %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups=c('Forest loss', 'Cultivation loss'),
+      options=layersControlOptions(collapsed=FALSE)) |> 
+    hideGroup('Cultivation loss')
 ```
 
 ---

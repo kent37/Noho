@@ -12,8 +12,8 @@ lc_2021 = read_layer(
 
 # Changes in land cover class i.e. from-to
 lc_change = 
-  tibble(`2001`=values(lc_2001),
-         `2021`=values(lc_2021)) %>% 
+  tibble(`2001`=values(lc_2001, mat=FALSE),
+         `2021`=values(lc_2021, mat=FALSE)) %>% 
   filter(!is.na(`2001`)) %>% 
   mutate(`2001`=class_lookup[as.character(`2001`)],
          `2021`=class_lookup[as.character(`2021`)]) %>% 
@@ -57,6 +57,27 @@ lost_forest_poly =
 lost_forest_poly = st_transform(lost_forest_poly, st_crs(noho)) # Mass state plane
 
 st_write(st_sf(lost_forest_poly), here::here('Trees/Lost_forest_2001_2021.gpkg'), delete_layer=TRUE)
+
+# Make a polygon layer with areas that were cultivated in 2001
+# and not in 2021
+lost_cultivated = (lc_2001==81|lc_2001==82) & lc_2021!=81 & lc_2021!=82
+
+lost_cultivated[lost_cultivated==0] = NA
+was_cultivated = raster::mask(lc_2021, lost_cultivated)
+lost_cultivated_poly = 
+  as.polygons(was_cultivated) %>% 
+  st_as_sf() %>% 
+  group_by(Layer_1) %>% 
+  summarize() %>% 
+  st_union(by_feature=TRUE) %>% 
+  mutate(Class=class_lookup[as.character(Layer_1)]) %>% 
+  select(-Layer_1)
+
+lost_cultivated_poly = st_transform(lost_cultivated_poly, st_crs(noho)) # Mass state plane
+
+st_write(st_sf(lost_cultivated_poly), 
+         here::here('Trees/Lost_forest_2001_2021.gpkg'), 
+         layer='Lost_cultivated', delete_layer=TRUE)
 
 # Make a polygon layer with areas that were <30% tree coverage in 2015
 coverage_2016 = read_layer(

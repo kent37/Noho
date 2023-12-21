@@ -188,7 +188,7 @@ map_forest_loss = function(lost_forest_poly, region=NULL) {
       overlayGroups=overlay_groups,
       options=layersControlOptions(collapsed=FALSE)) %>% 
     addLegend(colors=legend_colors, labels=legend_labels,
-              title='2019 land use')
+              title='2021 land use')
 }
 
 # Format as percent with no decimal
