@@ -1,0 +1,88 @@
+---
+title: "Planting sites"
+format:
+  html:
+    embed-resources: true
+    header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+    page-layout: full
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+<style>
+.dataTables_info {
+    padding-right: 20px;
+}
+</style>
+
+Possible planting sites in Northampton, Florence and Leeds town centers,
+as surveyed by members and volunteers of the 
+Northampton Urban Forestry Commission.
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(crosstalk)
+library(DT)
+library(leaflet)
+library(sf)
+```
+
+```{r data, include=FALSE}
+qmile_raw = read_sf(here::here('Trees/Quadrant maps/All planting sites with data.gpkg')) |> 
+  st_transform(4326)
+
+qmile = qmile_raw |> 
+  select(-c(Latitude, Longitude, y_proj, x_proj, Sector, `Site ID`, Sidewalk,
+            `Street number`, `Street name`, `Street ext`, Street)) |> 
+  select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Loc=Location, 
+         everything()) |> 
+  mutate(label=unclass(str_glue('{ID} {Address}')))
+
+shared_qmile =  SharedData$new(qmile)
+```
+
+---
+
+Click the checkboxes to filter the data.
+
+```{r map}
+filter_checkbox("own", "Ownership", shared_qmile, ~Owner, inline = TRUE)
+filter_checkbox('under', 'Under wire?', shared_qmile, ~`Under wire`, inline=TRUE)
+
+map = leaflet(width='95%', height='700px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
+  addCircleMarkers(data=shared_qmile, radius=~5, label=~label,
+                   group='Trees',
+                   stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
+  addLayersControl(baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+    overlayGroups='Trees',
+    options=layersControlOptions(collapsed=FALSE))
+  
+map
+```
+
+---
+
+```{r table}
+datatable(shared_qmile |> st_drop_geometry(), rownames = FALSE,
+          extensions = 'Buttons', 
+          options = list(
+            columnDefs = list(list(visible=FALSE, targets=c('geom', 'label'))),
+            dom = 'riBtlp',
+            buttons = list(list(
+              extend = 'collection',
+              buttons = c('csv', 'excel'),
+              text = 'Download'
+            ))
+          ))
+```
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>
