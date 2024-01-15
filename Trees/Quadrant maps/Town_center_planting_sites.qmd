@@ -1,5 +1,5 @@
 ---
-title: "Planting sites"
+title: "Northampton city center planting sites"
 format:
   html:
     embed-resources: true
@@ -16,7 +16,7 @@ execute:
 }
 </style>
 
-Possible planting sites in Northampton, Florence and Leeds town centers,
+Possible planting sites in Northampton, Florence and Leeds city centers,
 as surveyed by members and volunteers of the 
 Northampton Urban Forestry Commission.
 
@@ -37,18 +37,23 @@ qmile = qmile_raw |>
             `Street number`, `Street name`, `Street ext`, Street)) |> 
   select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Loc=Location, 
          everything()) |> 
-  mutate(label=unclass(str_glue('{ID} {Address}')))
+  mutate(label=unclass(str_glue('{ID} {Address}')),
+         Owner = factor(Owner, levels=c('B', 'C', 'R', 'S', '?')),
+         `Under wire` = if_else(`Under wire` %in% c('1Y, 1N', 'Y/N', 'N/Y'), 'B', `Under wire`),
+         `Under wire` = factor(`Under wire`, levels=c('Y', 'N', 'B', 'X', '?')))
 
 shared_qmile =  SharedData$new(qmile)
 ```
 
 ---
 
-Click the checkboxes to filter the data.
+Click the checkboxes to filter the data shown on the map and in the table below.
 
 ```{r map}
-filter_checkbox("own", "Ownership", shared_qmile, ~Owner, inline = TRUE)
-filter_checkbox('under', 'Under wire?', shared_qmile, ~`Under wire`, inline=TRUE)
+filter_checkbox("own", "Ownership (B = Tree belt; C = city property; R = ROW; S = Setback; ? = uncertain)", 
+                shared_qmile, ~Owner, inline = TRUE)
+filter_checkbox('under', 'Under wire? (Y = yes; N = No; B = Both, when > 1 tree; X = next to)', 
+                shared_qmile, ~`Under wire`, inline=TRUE)
 
 map = leaflet(width='95%', height='700px') %>% 
   setView(-72.667, 42.330, 12) %>% 
@@ -76,7 +81,7 @@ datatable(shared_qmile |> st_drop_geometry(), rownames = FALSE,
             buttons = list(list(
               extend = 'collection',
               buttons = c('csv', 'excel'),
-              text = 'Download'
+              text = 'Download selected sites'
             ))
           ))
 ```
