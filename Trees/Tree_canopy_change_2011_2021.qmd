@@ -402,6 +402,49 @@ zones = all_zoning |>
 
 ```
 
+### Low canopy  map
+
+This map shows areas of the city with less than 20% tree canopy in 2021 in pink.
+Overlays show Northampton city centers and
+zoning categories as aggregated for this
+report.
+
+```{r low_canopy_map}
+tc_low = tc_2021 |> 
+  project('epsg:4326')
+tc_low[tc_low>=20] = NA
+tc_low[!is.na(tc_low)] = 0
+
+map = leaflet(width='95%', height='700px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite')
+
+  map %>%
+    addRasterImage(tc_low, 
+                   colors=colorNumeric('red', 0, na.color=NA), 
+                   opacity=0.4, group='Canopy < 20%') |> 
+    addPolygons(data=zones |> st_transform(4326),
+                weight=0.5, group='Zones',
+                color='grey',
+                fillColor=~color,
+                fillOpacity=0.1,
+                label=~Category) %>% 
+    addPolygons(data=centers |> st_transform(4326),
+                weight=1, color='black',
+                fill=FALSE, group='Centers') |> 
+    addPolygons(data=noho %>% st_transform(4326),
+                weight=1, fill=FALSE, color='grey') %>% 
+    addLayersControl(
+      baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+      overlayGroups=c('Canopy < 20%', 'Centers', 'Zones'),
+      options=layersControlOptions(collapsed=FALSE)) %>%
+    addLegend(colors=zone_colors, labels=names(zone_colors),
+              title='Aggregated zoning') |> 
+    hideGroup('Zones')
+
+```
 <small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
   <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
