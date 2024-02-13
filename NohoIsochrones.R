@@ -1,10 +1,12 @@
 # Noho isochrones
 library(tidyverse)
+library(leaflet)
 library(osmdata)
 # remotes::install_github("GIScience/openrouteservice-r")
 library(openrouteservice)
 library(mapview)
 library(sf)
+
 noho = getbb("Northampton, Massachusetts")
 streets = noho %>%
   opq() %>%
@@ -17,12 +19,10 @@ small_streets = noho %>%
                   value = c("residential", "living_street", "unclassified", "service", "footway")) %>% 
   osmdata_sf()
 
-# details_cleaned??
-gg1 = details_cleaned %>% 
-  ggplot() +
+gg1 = ggplot() +
   geom_sf(data = small_streets$osm_lines, col = 'grey40', size = .1) +
   geom_sf(data = streets$osm_lines, col = 'grey40', size = .4) +
-  geom_pointdensity(aes(geo_longitude, geo_latitude), size = 2, alpha = .8) +
+  #geom_pointdensity(aes(geo_longitude, geo_latitude), size = 2, alpha = .8) +
   geom_sf(data = small_streets$osm_lines, col = alpha('grey40', .2), size = .1) +
   geom_sf(data = streets$osm_lines, col = alpha('grey40', .2), size = .4) +
   scale_color_viridis_c(option = 'inferno') +
@@ -62,20 +62,48 @@ mapview(ranges, alpha.regions = 0.2, homebutton = FALSE, legend = FALSE) +
 
 gg1 + geom_sf(data=roost_res, aes(color=value), alpha=0.1)
 
-# Aldrich st
+# Aldrich st by time
 aldrich_bike = ors_isochrones(aldrich_st, range = 45*60, interval = 15*60, 
                       profile=ors_profile('bike'), output = "sf")
 
 aldrich_walk = ors_isochrones(aldrich_st, range = 45*60, interval = 15*60, 
                       profile=ors_profile('walking'), output = "sf")
 
-library(leaflet)
-
 leaflet( ) %>% 
- addTiles("http://tiles.mapc.org/basemap/{z}/{x}/{y}.png",
-          attribution='Map tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://www.mass.gov/mgis/">MassGIS</a>.') %>% 
+ addProviderTiles('CartoDB.Positron') %>% 
   addPolygons(data=st_geometry(aldrich_bike), weight=1, group='bike',
               color='gray', fillColor='steelblue', fillOpacity=0.1) %>% 
   addPolygons(data=st_geometry(aldrich_walk), weight=1, group='walk',
               color='green', fillColor='green', fillOpacity=0.1) %>% 
   addLayersControl(overlayGroups = c('bike', 'walk'))
+
+# Aldrich st by distance
+meters_per_mile = 1609.34
+aldrich_walk_mi = ors_isochrones(aldrich_st, range = 4*meters_per_mile,
+                                 interval = 1*meters_per_mile, 
+                                 range_type='distance',
+                                 smoothing=0,
+                      profile=ors_profile('walking'), output = "sf")
+
+leaflet() %>% 
+ addProviderTiles('CartoDB.Positron') %>% 
+  addPolygons(data=st_geometry(aldrich_walk_mi), weight=1, group='walk',
+              color='green', fillColor='green', fillOpacity=0.1)
+
+
+# Query OSM based on https://overpass-turbo.eu/
+# (
+#  node
+#   [amenity~".*"]
+#   ({{bbox}});
+#  node
+#    [shop~".*"]
+#   ({{bbox}});
+#  node
+#    [tourism~".*"]
+#   ({{bbox}});
+#  node
+#    [healthcare~".*"]
+#   ({{bbox}});
+# );
+#  out;
