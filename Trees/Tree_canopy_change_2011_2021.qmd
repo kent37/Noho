@@ -55,6 +55,9 @@ lc_layers =
           read_tree_layer, 
           .progress='Reading layers')
 
+wards = read_sf(here::here(
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  st_transform(nlcd_crs)
 ```
 
 ```{r helpers}
@@ -81,7 +84,7 @@ change_table = function(changes, desc, ...) {
            Acre_Change=Area*Change) |> 
     mutate(`2011_Acres`=Area*`2011_Percent`, .before='2011_Percent') |> 
     mutate(`2021_Acres`=Area*`2021_Percent`, .before='2021_Percent') |> 
-    arrange(desc(`2011_Percent`)) |> 
+    arrange(desc(`2021_Percent`)) |> 
     gt() |> 
     cols_label(Change='Percent',
                Acre_Change='Acres',
@@ -336,12 +339,82 @@ This table shows the canopy coverage in 2011 and 2021 by zone.
 change_table(zone_change, 'by zoning category', Class='Zoning class')
 ```
 
+---
+
+### Tree canopy by ward and precinct
+
+This chart show the tree canopy percent within each voting ward and precinct.
+
+```{r by_ward}
+ward_coverage = pmap_dfr(wards |> select(WardPrec), function(WardPrec, geometry) {
+  clip_and_mean_all(geometry) |> 
+    mutate(WardPrec=WardPrec, .before=1)
+})
+
+ward_labels = ward_coverage |> 
+  filter(Year==2021) |> 
+  mutate(Year=2021.1) |> 
+  arrange(WardPrec) |> 
+  mutate(vjust=c(0.5, 0.75, -0.25, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5))
+
+
+# Overall coverage by ward
+ggplot(ward_coverage, aes(Year, Coverage, color=WardPrec, group=WardPrec)) +
+  geom_line(linewidth=1) +
+  geom_text(data=ward_labels, aes(label=WardPrec, vjust=vjust),
+            hjust=-0, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL, limits=c(0, 0.8),
+                     labels=label_percent(accuracy=1)) +
+  guides(color='none') +
+  labs(x='Year', y='Tree canopy coverage (%)',
+       title='Northampton tree canopy coverage by ward and precinct, 2011-2021',
+       caption=plot_caption)
+```
+
+The next chart shows the change in percent tree canopy 
+since the 2011 baseline, by ward and precinct.
+
+```{r change_by_ward}
+# Change in coverage by ward
+ward_change = ward_coverage %>% 
+  arrange(Year) %>% 
+  group_by(WardPrec) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
+  ungroup()
+
+ward_change_labels = ward_change |> 
+  filter(Year==2021) |> 
+  mutate(Year=2021.1) |> 
+  arrange(WardPrec) |> 
+  mutate(vjust=c(0.5, 0, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 1, 0.5, 0.5))
+
+
+ggplot(ward_change, aes(Year, Change, color=WardPrec, group=WardPrec)) +
+  geom_line(linewidth=1) +
+  geom_text(data=ward_change_labels, aes(label=WardPrec, vjust=vjust),
+            hjust=0, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL,
+                     labels=label_percent(accuracy=0.1)) +
+  labs(x='Year', y='Change in tree canopy coverage (%)',
+       title='Change in tree canopy coverage by ward and precinct, 2011-2021',
+       caption=plot_caption) +
+  guides(color='none')
+```
+
+This table shows the canopy coverage in 2011 and 2021 by ward and precinct.
+
+```{r ward_change_table}
+change_table(ward_change, 'by ward and precinct', WardPrec='Ward and precinct')
+```
+
 ### Canopy change map
 
 This map shows the change in tree canopy percent from 2011 to 2021.
-Overlays show Northampton city centers and
+Overlays show Northampton city centers,
 zoning categories as aggregated for this
-report.
+report, and wards and precincts.
 
 ```{r zoning_map}
 tc_2011 = lc_layers$`nlcd_tcc_conus_2011_v2021-4.tif`
@@ -385,11 +458,16 @@ zones = all_zoning |>
     addPolygons(data=centers |> st_transform(4326),
                 weight=1, color='black',
                 fill=FALSE, group='Centers') |> 
+    addPolygons(data=wards |> st_transform(4326),
+                weight=1, color='steelblue',
+                fill=FALSE, group='Wards & Precincts',
+                label=~WardPrec,
+                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |> 
     addPolygons(data=noho %>% st_transform(4326),
                 weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(
       baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
-      overlayGroups=c('Change', 'Centers', 'Zones'),
+      overlayGroups=c('Change', 'Centers', 'Zones', 'Wards & Precincts'),
       options=layersControlOptions(collapsed=FALSE)) %>%
     # Hack to reverse the legend order from
     #   https://stackoverflow.com/a/56334156/80626
@@ -402,12 +480,12 @@ zones = all_zoning |>
 
 ```
 
-### Low canopy  map
+### Low canopy map
 
 This map shows areas of the city with less than 20% tree canopy in 2021 in pink.
-Overlays show Northampton city centers and
+Overlays show Northampton city centers,
 zoning categories as aggregated for this
-report.
+report, and wards and precincts.
 
 ```{r low_canopy_map}
 tc_low = tc_2021 |> 
@@ -434,11 +512,16 @@ map = leaflet(width='95%', height='700px') %>%
     addPolygons(data=centers |> st_transform(4326),
                 weight=1, color='black',
                 fill=FALSE, group='Centers') |> 
+    addPolygons(data=wards |> st_transform(4326),
+                weight=1, color='steelblue',
+                fill=FALSE, group='Wards & Precincts',
+                label=~WardPrec,
+                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |> 
     addPolygons(data=noho %>% st_transform(4326),
                 weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(
       baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
-      overlayGroups=c('Canopy < 20%', 'Centers', 'Zones'),
+      overlayGroups=c('Canopy < 20%', 'Centers', 'Zones', 'Wards & Precincts'),
       options=layersControlOptions(collapsed=FALSE)) %>%
     addLegend(colors=zone_colors, labels=names(zone_colors),
               title='Aggregated zoning') |> 
