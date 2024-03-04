@@ -7,6 +7,8 @@ library(mapview)
 library(sf)
 library(tidygeocoder)
 
+source(here::here('Trees/Geocoding.R'))
+
 planted_raw = read_sheet(
   'https://docs.google.com/spreadsheets/d/1rIJKxHEv54ULyM4BhTkrGKDITdbv34X5bEDFp6gRx_4/edit#gid=1562980960',
   sheet=1,
@@ -64,28 +66,6 @@ duplicates = duplicates |>
 # mapview(coded_sf|> filter(confidence!=10), label='Street', zcol='confidence')
 
 # Try matching up with MassGIS addresses by ward
-massgis = st_read(here::here('Shapefiles/AddressPts_M214/AddressPts_M214.shp')) |> 
-  select(-(ADDR_PT_ID:NAD_ID), -REL_LOC, -(WING:SUBSITE),
-         -NEIGHBORHD, -(STATE:PRE_TYPE), -(POST_DIR:ADDRTWN_ID)) |> 
-  distinct()
-
-wards = st_read(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_ward_precinct_2010_20190916.shp')) |> 
-  mutate(ward=str_sub(WARD, 1, 1)) |> 
-  group_by(ward) |> 
-  summarize()
-
-massgis_wards = st_join(massgis, wards) |> 
-  mutate(ADDR_NUM=as.numeric(ADDR_NUM))
-
-# Some addresses have multiple points, e.g. 73 Barrett St which
-# includes all of Hampton Garden
-# Just use the centroid
-massgis_wards = massgis_wards |> 
-  group_by(ADDR_NUM, STREETNAME, ward) |>
-  summarize(.groups='drop') |> 
-  mutate(geometry=map(geometry, st_centroid))
-
-massgis_wards$geometry = st_as_sfc(massgis_wards$geometry, crs=st_crs(massgis))
 
 # MassGIS spells out ROAD, etc. We have to edit addresses for this.
 # We also have to strip out FLORENCE and LEEDS
@@ -96,22 +76,6 @@ addresses$Street |> str_extract(' ([^ ]+)$', group=1) |> unique()
 addresses$Street_orig = addresses$Street
 addresses$Street = addresses$Street |> 
   str_remove(', (FLORENCE|LEEDS)$')
-
-expand_st_to_street = function(sts) {
-    str_replace_all(sts, c(
-    ' DR$' = ' DRIVE',
-    ' ST$' = ' STREET',
-    ' PL$' = ' PLACE',
-    ' RD$' = ' ROAD',
-    ' RD EXT$' = 'ROAD',
-    ' AVE$' = ' AVENUE',
-    ' CT$' = ' COURT',
-    ' TERR$' = ' TERRACE',
-    ' LN$' = ' LANE',
-    ' CIR$' = ' CIRCLE',
-    ' PLZ$' = ' PLAZA'
-  ))
-}
 
 addresses$Street = addresses$Street |> expand_st_to_street()
 
@@ -133,12 +97,14 @@ coded2_sf = coded2 |>
   st_as_sf(coords=c('long', 'lat'), crs=4326)
 
 # A few fails still, do these by hand in QGIS
+# See here::here('Addresses.qgz')
 not_coded = st_read(here::here('Shapefiles/Not_coded_addresses.gpkg')) |> 
   mutate(Num=NA, .before=1) |>
   st_transform(4326)
 
 coded2_sf = coded2_sf |> 
   filter(!Street %in% not_coded$Street)
+
 matched_addresses2 =   
   inner_join(addresses, 
              coded2_sf |> select(-Street_Addr, -Address),
