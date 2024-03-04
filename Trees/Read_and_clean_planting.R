@@ -6,11 +6,28 @@ source(here::here('Trees/Binomial_name.R'))
 planted_raw = read_sheet(
   'https://docs.google.com/spreadsheets/d/1rIJKxHEv54ULyM4BhTkrGKDITdbv34X5bEDFp6gRx_4/edit#gid=1562980960',
   sheet=1,
+  range="A:R",
   col_types='c'
 )
 
+planted_raw_2023 = read_sheet(
+  'https://docs.google.com/spreadsheets/d/1gkjDBEGSVutFosuvBT2iWY-dUm571EnoIdrMg-n-Npw/edit#gid=2048232294',
+  sheet=1,
+  range="A:U",
+  col_types='c'
+) |> 
+  # Munge some streets to match the geocoded address list
+  mutate(Street = if_else(is.na(`#`), case_when(
+    Street == "INDUSTRIAL DRIVE" ~ "INDUSTRIAL DRIVE 106-168",
+    Street == "MOSER STREET" ~ "MOSER STREET X 4-14",
+    Street == "MUSANTE DRIVE" ~ "MUSANTE DRIVE X 50",
+    Street == "PRINCE STREET" ~ "PRINCE X LAUREL",
+    .default=Street
+  ), Street)) |> 
+  select(-`Tree Diaper`, -starts_with('Watering Date'))
+
 planted = planted_raw |> 
-  select(`#`:Notes) |> 
+  bind_rows(planted_raw_2023) |> 
   rename(Num=`#`) |> 
   mutate(Num=parse_number(Num),
          Year = year(mdy(`Date Planted`, quiet=TRUE)),
