@@ -1,0 +1,652 @@
+---
+title: "Northampton Priority Tree Planting 2015-2023"
+author: "Kent S Johnson"
+toc: true
+callout-icon: false
+format:
+  html:
+    embed-resources: true
+    header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+<style>
+table.gt_table {
+    color: var(--quarto-body-color);
+    font-size: 14px;
+    width: auto;
+}
+</style>
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(googlesheets4)
+library(gt)
+library(leaflet)
+library(lubridate)
+library(scales)
+library(sf)
+library(terra)
+```
+
+```{r data}
+source(here::here('Trees/Read_and_clean_planting.R'))
+
+# Add an ID so we can easily union the various priority areas
+map_data$tree_id = seq_len(nrow(map_data))
+
+# Existing inventory data
+source(here::here('Trees/Read_and_clean_inventory.R'))
+inventory = st_as_sf(inventory, coords=c('LONGITUDE', 'LATITUDE'), crs=4326)
+
+# Canopy coverage data for 2021
+source(here::here('Trees/NLCD_helpers.R'))
+
+tc_2021 = read_layer(
+  here::here('data/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2021_v2021-4/nlcd_tcc_conus_2021_v2021-4.tif')) |> 
+    terra::disagg(4)
+
+tc_low = tc_2021 |> 
+  project('epsg:4326')
+tc_low[tc_low==254] = 0
+tc_low[tc_low>=20] = NA
+tc_low[!is.na(tc_low)] = 0
+
+
+```
+
+```{r setup}
+priority_tree_ids = c()
+source_text = 'Data: Northampton Tree Warden | Analysis: Kent S Johnson'
+
+# First two colors of RColorBrewer::brewer.pal(3, 'Dark2')
+survival_colors = values=c(Removed='#D95F02', Remaining='#1B9E77')
+
+#other_colors = rcartocolor::carto_pal(n=10, 'Prism')
+#other_colors = RColorBrewer::brewer.pal(n=10, 'Set3')
+
+theme_set(theme_minimal(base_size=12) + theme(legend.position='bottom'))
+
+tree_table_options = function(table, has_total_row=FALSE) {
+  table = table %>% 
+    tab_source_note(source_text) %>%
+    opt_row_striping()
+  
+  if (has_total_row) {
+    table = table %>% 
+      tab_style(locations=cells_body(rows=table['_data'][[1]][[1]] %in% c('Total')), 
+                style=list(cell_text(weight='bold'), 
+                           cell_borders(sides='top', weight=px(2))))
+  }
+  table
+}
+
+make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name=NULL) {
+  bbox = st_bbox(trees)
+  # Can't directly union point and line layers (trees & roads)
+  # We can union the bboxes with a little work
+  if (!is.null(overlay))
+    bbox = st_bbox(st_union(st_as_sfc(bbox), st_as_sfc(st_bbox(overlay))))
+  bbox = unname(bbox)
+  map = leaflet(width='796px', height='700px') |> # 796 is the container width
+    fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
+    addProviderTiles('CartoDB.Positron', group='Street') |> 
+    addProviderTiles('Esri.WorldImagery', group='Satellite')
+  
+  overlay_groups = 'Trees'
+  if (!is.null(overlay)) {
+    map = map |> add_overlay(overlay, overlay_labels, overlay_name)
+    overlay_groups = c(overlay_groups, overlay_name)
+  }
+  
+  map |> 
+    addCircleMarkers(data=trees, radius=~5+sqrt(count), label=~label,
+                     group='Trees',
+                     stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
+    addLayersControl(baseGroups=c('Street', 'Satellite'),
+      overlayGroups=overlay_groups,
+      options=layersControlOptions(collapsed=FALSE))
+}
+
+add_overlay = function(map, overlay, overlay_labels, overlay_name) {
+  if (any(str_detect(class(st_geometry(overlay)), 'POLYGON'))) {
+    map = map |> 
+      addPolygons(data=overlay, weight=1, fillOpacity=0.1, color='black',
+                  label=overlay_labels, group=overlay_name)
+    } else if (any(str_detect(class(st_geometry(overlay)), 'LINESTRING'))) {
+    map = map |> 
+      addPolylines(data=overlay, weight=1, fillOpacity=0.1, color='black',
+                  label=overlay_labels, group=overlay_name)
+    }
+  map
+}
+```
+
+```{r streets}
+# Streets from OpenStreetMap
+# Overpass Turbo query:
+# [bbox: 42.28414,-72.74122,42.37524,-72.58421];
+# (way
+#   [highway=primary];
+# way
+#   [highway=secondary];
+# way
+#   [highway=tertiary];
+# way
+#   [highway=residential];
+#  );
+# 
+# /*added by auto repair*/
+# (._;>;);
+# /*end of auto repair*/
+# out;
+
+noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'))
+osm_roads = read_sf(here::here('Shapefiles/Roads.geojson'))
+osm_roads = osm_roads[noho |> st_transform(st_crs(osm_roads)),]
+
+main_st_leeds = osm_roads |> 
+  filter(id %in% c('way/155184017', 'way/155184015', 'way/155184013'))
+
+main_st_florence = osm_roads |> 
+  filter(id %in% c('way/9224974', 'way/942414692'))
+
+# Convert street names as listed in map_data to the format that OpenStreetMap
+# uses so we can look them up in osm_roads
+names_to_osm = function(streets) {
+  streets |> 
+    str_to_title() |> 
+    str_replace_all(c(
+      ' Ave$' = ' Avenue',
+      ' Cir$' = ' Circle',
+      ' Dr$' = ' Drive',
+      ' Ln$' = ' Lane',
+      ' Rd$' = ' Road',
+      ' St$' = ' Street',
+      ' St, Florence$' = ' Street',
+      ' Terr$' = ' Terrace',
+      "O'donnell Dr" = "O'Donnell Dr"
+    ))
+}
+```
+
+## Introduction
+
+The Northampton Urban Forestry Commission has identified numerous
+priority regions for new plantings. This report summarizes 2015-2023 planting in
+many of the priority regions.
+
+The tree locations in this analysis are approximate, derived by
+geocoding the tree addresses. This locates most trees on the building at the
+tree address, rather than in the correct location - typically on the 
+right-of-way.
+
+Of the `r comma(nrow(planted))` trees planted in this period, 
+this report only considers the `r comma(sum(map_data$count))` surviving trees.
+Location data for the `r sum(planted$dead)` removed trees was not available.
+
+## Proximity to downtown centers
+
+```{r downtown}
+qmile_raw = read_sheet(
+  'https://docs.google.com/spreadsheets/d/1BPOBrVKXX7ROS-gORve0q3MeRDxBtJ7s4KPwdU4Kl4I/edit#gid=0',
+  sheet=1, skip=1,
+  col_types='c'
+) |> mutate(Sector=factor(Sector))
+
+qmile_goals = qmile_raw |> 
+  filter(`Ownership:         R/S/?/B/C`=='R') |> # Right-of-way only per Molly
+  mutate(Count=parse_number(replace_na(`Number of  Trees`, '1'))) |> 
+  summarize(.by=Sector, Sites=sum(Count)) |> 
+  complete(Sector, fill=list(Sites=0)) |> 
+  mutate(Neighborhood=case_match(str_sub(Sector, 1, 1),
+                           'F' ~ 'Florence',
+                           'N' ~ 'Northampton',
+                           'L' ~ 'Leeds'))
+
+centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPolys') |> 
+  st_make_valid() |> 
+  st_transform(4326) |> 
+  mutate(Neighborhood=factor(City), 
+         Sector=factor(Code))
+
+center_trees = map_data |> 
+  filter(str_detect(Location, 'RIGHT OF WAY|TREE BELT')) |> 
+  st_join(centers, left=FALSE)
+qmile_actual = center_trees |> 
+  st_drop_geometry() |> 
+  summarize(.by=c(Neighborhood, Sector), Planted=sum(count))
+
+center_summary = qmile_goals |> 
+  left_join(qmile_actual) |> 
+  mutate(Planted=replace_na(Planted, 0)) |> 
+  arrange(desc(Neighborhood), Sector)
+```
+
+The Urban Forestry Commission has identified
+`r sum(qmile_goals$Sites)` possible planting locations in the public 
+right-of-way near
+the Northampton, Florence and Leeds city centers. To date,
+`r sum(qmile_actual$Planted)` trees have been planted in the right-of-way
+or tree belt in these regions.
+
+The downtown areas were further divided into 4-5 sectors. This table
+summarizes the planting per sector; the map shows the trees planted
+in each sector.
+
+```{r downtown_table}
+center_summary |> 
+  select(Neighborhood, Sector, Sites, Planted) |> 
+  gt(rowname_col='Sector', groupname_col='Neighborhood') |> 
+  summary_rows(columns=c(Sites, Planted), 
+               fns=list(Total=~sum(.)), decimals=0) |> 
+  grand_summary_rows(columns=c(Sites, Planted), 
+               fns=list(`Grand Total`=~sum(.)), decimals=0) |> 
+  tab_header(title='Downtown trees planted 2015-2023') |> 
+  tab_style(locations=list(cells_stub_summary(), cells_summary()),
+            style=list(cell_borders(sides='bottom', weight=px(2)),
+                       cell_text(weight='bold'))) |>
+  tab_style(locations=list(cells_stub_grand_summary(), cells_grand_summary()),
+            style=list(cell_text(weight='bolder'))) |>
+  tab_source_note(source_text)
+```
+
+
+```{r downtown-map}
+map=make_map(center_trees, centers, centers$Sector, 'City centers')
+
+# Hack in Leeds locations
+# leeds_locations = read_sf(here::here('Trees/Quadrant maps/Possible_tree_locations.gpkg'),
+#                           'Leeds_tree_locations') |> 
+#   st_transform(4326)
+# map = map |> 
+#     addCircleMarkers(data=leeds_locations, radius=5,
+#                      group='Locations',
+#                      stroke=FALSE, fillColor="#D95F02", fillOpacity=0.5) |> 
+#     addLayersControl(baseGroups=c('Street', 'Satellite'),
+#       overlayGroups=c('Trees', 'City centers', 'Locations'),
+#       options=layersControlOptions(collapsed=FALSE))
+
+map
+priority_tree_ids = union(priority_tree_ids, center_trees$tree_id)
+```
+
+## Main arteries through town
+
+```{r arteries}
+arteries = c('PLEASANT STREET', 'KING ST', 'BRIDGE ST', 'ELM ST', 'LOCUST ST',
+             'MAIN ST, FLORENCE', 'NORTH MAIN ST', 'CONZ ST', 'OLD SOUTH ST',
+             'WEST ST', 'PRINCE ST', 'CHAPEL ST', 'WESTHAMPTON RD',
+             'BRIDGE RD', 'DAMON RD', 'HATFIELD ST', 'NONOTUCK ST', 'ELM ST',
+             'BARRETT ST', 'DAY AVE', 'RYAN RD', 'ROCKY HILL RD')
+
+artery_trees = map_data |> 
+  filter(Street %in% arteries)
+
+artery_names = arteries |> sort() |> str_to_title()
+osm_artery_names = names_to_osm(artery_names)
+osm_artery_roads = osm_roads |> filter(name %in% osm_artery_names)
+```
+
+`r sum(artery_trees$count)` trees have been planted on main arteries
+throughout Northampton including
+`r str_flatten_comma(artery_names, ', and ')`.
+
+```{r arteries_map}
+# Any missing?
+#setdiff(osm_artery_names, osm_artery_roads$name)
+
+make_map(artery_trees, osm_artery_roads, osm_artery_roads$name, 'Arteries')
+priority_tree_ids = union(priority_tree_ids, artery_trees$tree_id)
+
+```
+
+<!-- ## City parking lots
+
+I don't have good enough information about 
+the actual tree locations to sort this out. -->
+
+```{r parking, eval=FALSE}
+# From Overpass Turbo query https://overpass-turbo.eu/
+# way
+#   [amenity=parking]
+#   ({{bbox}});
+# (._;>;);
+# out;
+
+lots = read_sf(here::here('Shapefiles/parking_lots.geojson')) |> 
+  filter(str_starts(id, 'way/'))
+
+lot_names = c('Hampton Avenue Lot', "Round House Lot", "Armory Street Lot",
+              "James House Lot", "Masonic Street Lot", "Strong Avenue Lot"
+              )
+
+named_lots = lots |> filter(name %in% lot_names)
+
+ways = tribble(
+  ~name, ~way,
+  "Mulino's Lot", '157013633',
+  "Old Honda Dealership", '113730321',
+  'WEBS', '205658296',
+  'Public Health Department', '205658295',
+  'Merrick Lane', '152097595'
+  ) |> 
+  mutate(way=paste0('way/', way))
+
+ways_lots = left_join(ways, lots,
+                      by=c(way='@id'), suffix=c('', '.lots')) |> 
+  select(-name.lots)
+
+map_lots = bind_rows(named_lots, ways_lots)
+#map_lots = lots
+buffered_lots = map_lots |> 
+  st_transform(26986) |>
+  st_buffer(10) |> 
+  st_transform(4326)
+lot_trees = map_data[buffered_lots,]
+```
+
+```{r lot_map, eval=FALSE}
+make_map(lot_trees, map_lots, overlay_labels=NULL, 'Parking lots')
+
+```
+
+## Proximity to low-income neighborhoods
+
+
+```{r low-income}
+# Some guesses
+extra_locations = read_sf(here::here('Shapefiles/Extra_locations.gpkg'))
+
+# Specific buildings
+# !! This is duplicated in Explore_planting.R !!
+low_income_bldg = tribble(
+  ~address, ~Location, 
+  '80 Damon Rd', 'River Run Apts',
+  '241 Jackson St', 'Hampshire Heights',
+  '178 Florence Rd', 'Florence Heights',
+  '491 Bridge Rd', 'Meadowbrook Apts',
+  '81 Conz St', 'Salvo House',
+  '49 Old South St', 'MacDonald House',
+  '91 Grove St', 'Grove Street Inn'
+)
+
+# Streets
+low_income_streets = c(
+  "MARKET ST", "GRAVES AVE", "HAWLEY ST", "FRUIT ST", 
+  "DAMON RD", "LANE PLANT RD", "BRIDGE RD", "MAIN ST, LEEDS",
+  "GLENDALE RD", "RUST AVE"
+)
+low_income_trees = low_income_bldg |> 
+  left_join(map_data) |> 
+  filter(!is.na(count)) |> 
+  st_as_sf() |> 
+  bind_rows(map_data |> filter(Street %in% low_income_streets)) |> 
+  mutate(Location = coalesce(Location, str_to_title(Street)))
+
+priority_tree_ids = union(priority_tree_ids, low_income_trees$tree_id)
+
+```
+
+Several low-income areas have been identified for planting including
+`r low_income_bldg$Location |> sort() |> str_flatten_comma(', and ')` and
+the streets 
+`r low_income_streets |> sort() |> str_to_title() |> str_flatten_comma(', and ')`.
+
+`r sum(low_income_trees$count)` trees have been planted in these areas:
+
+```{r low-income-table}
+low_income_trees |> 
+  st_drop_geometry() |> 
+  summarize(.by=Street, Count=sum(count)) |> 
+  arrange(desc(Count)) |> 
+  gt() |> 
+  tab_header(title='Trees planted in low-income areas') |> 
+  tab_source_note(source_text)
+```
+
+```{r low-income-map}
+osm_low_income_names = names_to_osm(low_income_streets)
+osm_low_income_roads = osm_roads |> filter(name %in% osm_low_income_names) |> 
+  bind_rows(main_st_leeds)
+
+# Any missing?
+# setdiff(osm_low_income_names, osm_roads$name)
+
+low_income_locations = extra_locations |> filter(Category=='Low income')
+make_map(low_income_trees, osm_low_income_roads, osm_low_income_roads$name, 
+         'Low-income locations') |> 
+  add_overlay(low_income_locations,
+              low_income_locations$Location, 'Low-income locations')
+
+```
+
+## Heavily trafficked secondary streets
+
+```{r secondary}
+secondary_streets = c(
+  # Florence
+  'BRIDGE RD', 'OAK ST', 'RYAN RD', 'BURTS PIT RD', 'NONOTUCK ST', 'PARK ST', 
+  'PINE ST', 'MEADOW ST', 'CLEMENT ST', 'RIVERSIDE DR', 'MAPLE ST', 
+  'NORTH MAPLE ST', 'CHESTNUT ST', 'SPRING ST', 'RESERVOIR RD', 
+  'FLORENCE RD', 'FEDERAL ST', 'BLISS ST', 'INDUSTRIAL DR', 
+  
+  # NORTHAMPTON: 
+  'PROSPECT ST', 'FINN ST', 'JACKSON ST', 'MASSASOIT ST', 'WOODLAWN AVE', 
+  'STATE ST', 'BARRETT ST', 'MARKET ST', 'NORTH ST', 'DAY AVE', 
+  'INDUSTRIAL DR', 'COOKE AVE', 'CENTER ST', 
+  
+  #LEEDS:  
+  'FLORENCE ST', 'MAIN ST', 'MULBERRY ST', 'DIMOCK ST', 'FRONT ST')
+
+secondary_trees = map_data |> 
+  filter(Street %in% secondary_streets)
+```
+
+`r sum(secondary_trees$count)` trees have been planted on heavily-trafficked
+secondary streets throughout Northampton.
+
+```{r secondary_map}
+osm_secondary_names = names_to_osm(secondary_streets)
+osm_secondary_roads = osm_roads |> filter(name %in% osm_secondary_names)
+
+# Any missing?
+# setdiff(osm_secondary_names, osm_roads$name)
+
+make_map(secondary_trees, osm_secondary_roads, osm_secondary_roads$name, 
+         'Secondary streets')
+priority_tree_ids = union(priority_tree_ids, secondary_trees$tree_id)
+```
+
+## Neighborhoods with sparse tree cover
+
+```{r sparse}
+sparse_streets = c(
+  'EARLE ST', 'LAUREL ST', 'CHAPEL ST', 'ROCKY HILL RD', 
+  'GOTHIC ST', 'CENTER ST', 'MASONIC ST', 'KING ST', 
+  'BROOKSIDE CIR', 'OVERLOOK DR', 'LONGVIEW DR', 'BURTS PIT RD', 
+  'WESTWOOD TERR', 'DREWSEN DR', 'CAHILLANE TERR', 'FOREST GLEN DR', 
+  'O\'DONNELL DR', 'WINCHESTER TERR', 'REDFORD DR', 'DEERFIELD DR', 
+  'ACREBROOK DR', 'AUSTIN CIR', 'BRIERWOOD DR', 'ACREBROOK DR', 
+  'TARA CIRCLE', 'GOLDEN DR', 'SPRUCE HILL AVE', 'HICKORY DR', 'BIRCH HILL RD',
+  'WOOD AVE', 'BEATTIE DR', 'GILRAIN TERR', 'TARA CIR', 
+  'GREGORY LN', 'MATTHEW DR', 'PIONEER KNOLLS', 'WOODS RD'
+)
+sparse_trees = map_data |> 
+  filter(Street %in% sparse_streets)
+```
+
+`r sum(sparse_trees$count)` trees have been planted in neighborhoods
+identified as having sparse tree cover.
+
+```{r sparse_map}
+osm_sparse_names = names_to_osm(sparse_streets)
+osm_sparse_roads = osm_roads |> filter(name %in% osm_sparse_names)
+# setdiff(osm_sparse_names, osm_sparse_roads$name)
+
+make_map(sparse_trees, osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover')
+priority_tree_ids = union(priority_tree_ids, sparse_trees$tree_id)
+```
+
+## Businesses with possible planting sites
+
+
+```{r businesses}
+# !! This is duplicated in Explore_planting.R !!
+businesses = tribble(
+  ~Location, ~address,
+  'Spare Time', '525 Pleasant St',
+  'Daily Hampshire Gazette', '115 Conz St',
+  'Cooley Dickenson Hospital', '30 Locust St',
+  'Kollmorgen', '50 Prince St',
+  'St. Elizabeth Ann Church', '91 King St', # Actually 99 but we have loc'n for 91
+  'Northampton Tire', '182 King St',
+  'Acme Automotive', '220 King St',
+  '200 King St', '200 King St',
+  '206 King St', '206 King St',
+  'Bluebonnet Diner', '324 King St',
+  'NAPA Auto Parts', '348 King St',
+  'Woodward & Grinnell', '8 North King St',
+  'Enterprise Car Rentals', '24 North King St',
+  'Big Y', '136 North King St',
+  'Cooke Ave. Apts', '316A Hatfield St',
+  'Cooke Ave. Apts', '364A Hatfield St',
+  'Cooke Ave. Apts', '380A Hatfield St'
+)
+
+business_locations = extra_locations |> filter(Category=='Business')
+business_trees = businesses |> 
+  inner_join(map_data |> select(-Location)) |> 
+  st_as_sf()
+priority_tree_ids = union(priority_tree_ids, business_trees$tree_id)
+```
+
+Several businesses have been identified as having possible planting sites
+including
+`r businesses$Location |> sort() |> unique() |> str_flatten_comma(', and ')`
+
+`r sum(business_trees$count)` trees have been planted at these businesses:
+
+```{r business-table}
+business_trees |> 
+  st_drop_geometry() |> 
+  summarize(.by=Location, Count=sum(count)) |> 
+  gt() |> 
+  tab_header(title='Trees planted at businesses') |> 
+  tab_source_note(source_text)
+```
+
+```{r business-map}
+make_map(business_trees, business_locations, business_locations$Location, 'Businesses')
+```
+
+## Summary of priority planting
+
+```{r priority}
+map_data$priority_tree = map_data$tree_id %in% priority_tree_ids
+```
+
+Of the `r sum(map_data$count)` trees planted, 
+`r sum(map_data |> filter(priority_tree) |> pull(count))` were in priority
+areas.
+
+```{r priority_by_year}
+# Join map_data back to planted to get priority and year
+planted_with_priority = planted |> 
+  filter(!dead) |> 
+  left_join(map_data |> 
+              st_drop_geometry() |> 
+              select(Num, Street, Ward, priority_tree))
+
+priority_by_year = planted_with_priority |> 
+  summarize(.by=c(Year, priority_tree), Count=n()) |> 
+  pivot_wider(names_from='priority_tree', values_from='Count') |> 
+  select(Year, Priority='TRUE', `Non-priority`='FALSE')
+
+priority_by_year |> 
+  arrange(Year) |> 
+  mutate(Year=as.character(Year)) |> 
+  bind_rows(summarize(priority_by_year, across(-Year, sum)) |> 
+              mutate(Year='Total')) |> 
+  mutate(`Percent priority`=int_pct(Priority/(Priority+`Non-priority`))) |> 
+  gt() |> 
+  tab_header('Priority tree planting 2015-2023') |> 
+  tree_table_options(has_total_row=TRUE)
+
+priority_by_year |>
+  mutate(Era = if_else(Year<=2018, '2018 and before', 'After 2018')) |> 
+  select(-Year) |> 
+  summarize(.by=Era, across(everything(), sum)) |> 
+  bind_rows(summarize(priority_by_year, across(-Year, sum)) |> 
+              mutate(Era='Total')) |> 
+  mutate(`Percent priority`=int_pct(Priority/(Priority+`Non-priority`))) |> 
+  gt() |> 
+  tab_header('Priority tree planting 2015-2023',
+             subtitle='Priority planting started in 2019') |> 
+  tree_table_options(has_total_row=TRUE)
+```
+
+This map shows all trees planted with priority trees in light green
+and other trees in darker green. Optional layers show the pre-existing 
+street tree inventory and portions of the City with less than 20%
+canopy cover.
+
+Mouse over trees for additional information.
+
+```{r all_priority_map}
+#| column: page-inset-right
+
+  bbox = unname(st_bbox(map_data))
+  leaflet(width='900px', height='800px') |> 
+    fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
+    addProviderTiles('CartoDB.Positron', group='Street') |> 
+    addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
+    add_overlay(centers, centers$Sector, 'City centers') |> 
+    add_overlay(osm_artery_roads, osm_artery_roads$name, 'Arteries') |> 
+    add_overlay(osm_low_income_roads, osm_low_income_roads$name, 
+                'Low-income locations') |> 
+    add_overlay(low_income_locations, low_income_locations$Location, 
+                'Low-income locations') |> 
+    add_overlay(osm_secondary_roads, osm_secondary_roads$name, 
+         'Secondary streets') |> 
+    add_overlay(osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover') |> 
+    add_overlay(business_locations, business_locations$Location, 'Businesses') |> 
+    addCircleMarkers(data=map_data |> filter(priority_tree),
+                     radius=~5+sqrt(count), label=~label,
+                     group='Priority trees',
+                     stroke=FALSE, 
+                     fillColor="#78c679", fillOpacity=0.6) |> 
+    addCircleMarkers(data=map_data |> filter(!priority_tree),
+                     radius=~5+sqrt(count), label=~label,
+                     group='Other planting',
+                     stroke=FALSE, 
+                     fillColor="#319354", fillOpacity=0.6) |> 
+    addCircleMarkers(data=inventory, radius=5, label=~SPP_BOT,
+                     group='Existing inventory', stroke=FALSE,
+                     fillColor='#006837', fillOpacity=0.5) |> 
+    addRasterImage(tc_low, 
+                   colors=colorNumeric('red', 0, na.color=NA), 
+                   opacity=0.4, group='Canopy < 20%') |> 
+    addLayersControl(baseGroups=c('Street', 'Satellite'),
+      overlayGroups=c('Priority trees', 'Other planting',
+                      'Existing inventory',
+                      'City centers', 'Arteries',
+                      'Low-income locations', 'Secondary streets',
+                      'Sparse cover', 'Businesses',
+                      'Canopy < 20%'),
+      options=layersControlOptions(collapsed=FALSE)) |> 
+    hideGroup(c('Existing inventory', 'Canopy < 20%'))
+
+```
+
+
+Tree canopy data is from the [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>
