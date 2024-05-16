@@ -35,11 +35,28 @@ qmile_raw = read_sf(here::here('Trees/Quadrant maps/All planting sites with data
 qmile = qmile_raw |> 
   select(-c(Latitude, Longitude, y_proj, x_proj, Sector, `Site ID`, Sidewalk,
             `Street number`, `Street name`, `Street ext`, Street)) |> 
-  select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Loc=Location, 
+  select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Location, 
          everything()) |> 
-  mutate(label=unclass(str_glue('{ID} {Address}')),
-         Owner = factor(Owner, levels=c('B', 'C', 'R', 'S', '?')),
-         `Under wire` = if_else(`Under wire` %in% c('1Y, 1N', 'Y/N', 'N/Y'), 'B', `Under wire`),
+  mutate(
+    Comments = if_else(is.na(Comments), '', Comments),
+    Count_str = case_when(
+      Count=='1' ~ '1 tree',
+      is.na(Count) ~ '',
+      .default = str_glue('{Count} trees')
+    ),
+    Location = case_match(Location,
+      'F' ~ 'Front',
+      'S' ~ 'Side',
+      'B' ~ 'Back',
+      'N/A' ~ '',
+      NA ~ '',
+      .default = Location
+    ),
+    Size = str_replace_all(Area, c(S='Small', M='Medium', N='Medium', L='Large')),
+    label=unclass(str_glue('{ID} {Address} {Location}, {Size}, {Count_str}<br>{Comments}')) |>
+      lapply(htmltools::HTML),
+    Owner = factor(Owner, levels=c('B', 'C', 'R', 'S', '?')),
+    `Under wire` = if_else(`Under wire` %in% c('1Y, 1N', 'Y/N', 'N/Y'), 'B', `Under wire`),
          `Under wire` = factor(`Under wire`, levels=c('Y', 'N', 'B', 'X', '?')))
 
 shared_qmile =  SharedData$new(qmile)
@@ -55,17 +72,31 @@ filter_checkbox("own", "Ownership (B = Tree belt; C = city property; R = ROW; S 
 filter_checkbox('under', 'Under wire? (Y = yes; N = No; B = Both, when > 1 tree; X = next to)', 
                 shared_qmile, ~`Under wire`, inline=TRUE)
 
+# Environmental justice communities
+ej = read_sf('~/Dev/ej2020/ej2020_gdb.zip') |> 
+  filter(MUNICIPALITY=='Northampton') |> 
+  st_transform(crs=4326)
+centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), 
+                  layer='CityCenterPolys') |> 
+  st_make_valid() |> 
+  st_transform(4326)
+                  
 map = leaflet(width='95%', height='700px') %>% 
   setView(-72.667, 42.330, 12) %>% 
   addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
   addTiles(group='OpenStreetMap') %>% 
   addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
-  addCircleMarkers(data=shared_qmile, radius=~5, label=~label,
+  addPolygons(data=ej, weight=1, fillOpacity=0.1, color='black',
+              group='EJ') |> 
+  addPolygons(data=centers, weight=1, fillOpacity=0.1, color='black',
+              group='City centers') |> 
+ addCircleMarkers(data=shared_qmile, radius=~5, label=~label,
                    group='Trees',
                    stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
   addLayersControl(baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
-    overlayGroups='Trees',
-    options=layersControlOptions(collapsed=FALSE))
+    overlayGroups=c('Trees', 'City centers', 'EJ'),
+    options=layersControlOptions(collapsed=FALSE)) |> 
+  hideGroup('EJ')
   
 map
 ```
