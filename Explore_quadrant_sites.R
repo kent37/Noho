@@ -12,8 +12,11 @@ qmile_data = qmile_data_raw |>
   select(-...16) |> 
   mutate(
     ident = str_glue('{Sector}-{`Site ID`}'),
-    Street=str_to_title(str_glue(
-      '{`Street name`} {`St/Rd/Ave/            Terr/Pl/Ct/                         Cir/etc`}')),
+    Street=str_to_title(
+      if_else(is.na(`St/Rd/Ave/            Terr/Pl/Ct/                         Cir/etc`), 
+              `Street name`,
+              str_glue(
+      '{`Street name`} {`St/Rd/Ave/            Terr/Pl/Ct/                         Cir/etc`}'))),
     Address = if_else(is.na(`Street number`), Street, str_glue('{`Street number`} {Street}'))) |> 
     rename(Number="Number of  Trees",
          Sidewalk="Sidewalk?       Y/N",
