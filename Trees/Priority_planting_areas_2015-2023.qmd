@@ -424,6 +424,27 @@ make_map(low_income_trees, osm_low_income_roads, osm_low_income_roads$name,
 
 ```
 
+## Environmental Justice populations
+
+The Commonwealth of Massachusetts designates environmental justice populations
+based on demographic criteria at the census block group level.
+
+```{r ej}
+ej = read_sf('~/Dev/ej2020/ej2020_gdb.zip') |> 
+  filter(MUNICIPALITY=='Northampton') |> 
+  st_transform(crs=4326)
+
+ej_trees = map_data[ej,]
+```
+
+`r sum(ej_trees$count)` trees have been planted in environmental justice
+communities in Northampton.
+
+```{r ej_map}
+make_map(ej_trees, ej, overlay_name='EJ populations')
+priority_tree_ids = union(priority_tree_ids, ej_trees$tree_id)
+```
+
 ## Heavily trafficked secondary streets
 
 ```{r secondary}
@@ -610,6 +631,7 @@ Mouse over trees for additional information.
                 'Low-income locations') |> 
     add_overlay(low_income_locations, low_income_locations$Location, 
                 'Low-income locations') |> 
+    add_overlay(ej, overlay_labels=NULL, overlay_name='EJ populations') |> 
     add_overlay(osm_secondary_roads, osm_secondary_roads$name, 
          'Secondary streets') |> 
     add_overlay(osm_sparse_roads, osm_sparse_roads$name, 'Sparse cover') |> 
@@ -634,7 +656,9 @@ Mouse over trees for additional information.
       overlayGroups=c('Priority trees', 'Other planting',
                       'Existing inventory',
                       'City centers', 'Arteries',
-                      'Low-income locations', 'Secondary streets',
+                      'Low-income locations', 
+                      'EJ populations',
+                      'Secondary streets',
                       'Sparse cover', 'Businesses',
                       'Canopy < 20%'),
       options=layersControlOptions(collapsed=FALSE)) |> 

@@ -107,6 +107,10 @@ summarize_names = function(common_names) {
 }
 
 # Summarize planting by location
+tree_count = function(count) {
+  if_else(count==1, '1 tree', paste(count, 'trees'))
+}
+
 map_data = planted |> 
   filter(!dead) |> 
   group_by(Num, Street, Ward) |> 
@@ -116,7 +120,7 @@ map_data = planted |>
             .groups='drop'
   ) |> 
   mutate(address=str_to_title(if_else(is.na(Num), Street, paste(Num, Street))),
-         label=paste0(address, ' (', count, ' trees)<br><br>', name_label) |> 
+         label=paste0(address, ' (', tree_count(count), ')<br><br>', name_label) |> 
            lapply(htmltools::HTML) |> unname())
 
 map_data = 
