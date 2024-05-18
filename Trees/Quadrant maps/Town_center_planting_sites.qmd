@@ -14,6 +14,11 @@ execute:
 .dataTables_info {
     padding-right: 20px;
 }
+
+/* Make the Street selector draw on top of the map's zoom control */
+.selectize-dropdown {
+    z-index: 2000;
+}
 </style>
 
 Possible planting sites in Northampton, Florence and Leeds city centers,
@@ -34,7 +39,7 @@ qmile_raw = read_sf(here::here('Trees/Quadrant maps/All planting sites with data
 
 qmile = qmile_raw |> 
   select(-c(Latitude, Longitude, y_proj, x_proj, Sector, `Site ID`, Sidewalk,
-            `Street number`, `Street name`, `Street ext`, Street)) |> 
+            `Street number`, `Street name`, `Street ext`)) |> 
   select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Location, 
          everything()) |> 
   mutate(
@@ -64,9 +69,11 @@ shared_qmile =  SharedData$new(qmile)
 
 ---
 
-Click the checkboxes to filter the data shown on the map and in the table below.
+Select streets or click the checkboxes to filter the data shown on the map and in the table below.
 
 ```{r map}
+filter_select('street', 'Street', shared_qmile, ~Street)
+
 filter_checkbox("own", "Ownership (B = Tree belt; C = city property; R = ROW; S = Setback; ? = uncertain)", 
                 shared_qmile, ~Owner, inline = TRUE)
 filter_checkbox('under', 'Under wire? (Y = yes; N = No; B = Both, when > 1 tree; X = next to)', 
