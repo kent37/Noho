@@ -91,7 +91,7 @@ make_map = function(trees, overlay=NULL, overlay_labels=NULL, overlay_name=NULL)
   if (!is.null(overlay))
     bbox = st_bbox(st_union(st_as_sfc(bbox), st_as_sfc(st_bbox(overlay))))
   bbox = unname(bbox)
-  map = leaflet(width='796px', height='700px') |> # 796 is the container width
+  map = leaflet(width='98%', height='700px') |> # 796 is the container width
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
     addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite')
@@ -621,7 +621,7 @@ Mouse over trees for additional information.
 #| column: page-inset-right
 
   bbox = unname(st_bbox(map_data))
-  leaflet(width='900px', height='800px') |> 
+  leaflet(width='98%', height='800px') |> 
     fitBounds(bbox[1], bbox[2], bbox[3], bbox[4]) |> 
     addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite') |> 

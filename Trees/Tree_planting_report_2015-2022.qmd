@@ -566,8 +566,9 @@ Mouse-over trees for additional information.
 :::{.column-page}
 
 ```{r map}
-wards = read_sf(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_ward_precinct_2010_20190916.shp')) |> 
-  mutate(ward=str_sub(WARD, 1, 1)) |> 
+wards = read_sf(here::here(
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  mutate(ward=str_sub(WardPrec, 1, 1)) |> 
   group_by(ward) |> 
   summarize() |> 
   st_transform(4326)
