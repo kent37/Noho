@@ -38,7 +38,7 @@ qmile_raw = read_sf(here::here('Trees/Quadrant maps/All planting sites with data
   st_transform(4326)
 
 qmile = qmile_raw |> 
-  select(-c(Latitude, Longitude, y_proj, x_proj, Sector, `Site ID`, Sidewalk,
+  select(-c(Latitude, Longitude, y_proj, x_proj, `Site ID`, Sidewalk,
             `Street number`, `Street name`, `Street ext`)) |> 
   select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Location, 
          everything()) |> 
@@ -74,6 +74,7 @@ Select streets or click the checkboxes to filter the data shown on the map and i
 ```{r map}
 filter_select('street', 'Street', shared_qmile, ~Street)
 
+filter_checkbox('sector', 'Sector', shared_qmile, ~Sector, inline=TRUE)
 filter_checkbox("own", "Ownership (B = Tree belt; C = city property; R = ROW; S = Setback; ? = uncertain)", 
                 shared_qmile, ~Owner, inline = TRUE)
 filter_checkbox('under', 'Under wire? (Y = yes; N = No; B = Both, when > 1 tree; X = next to)', 
@@ -83,11 +84,22 @@ filter_checkbox('under', 'Under wire? (Y = yes; N = No; B = Both, when > 1 tree;
 ej = read_sf('~/Dev/ej2020/ej2020_gdb.zip') |> 
   filter(MUNICIPALITY=='Northampton') |> 
   st_transform(crs=4326)
+
 centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), 
                   layer='CityCenterPolys') |> 
   st_make_valid() |> 
   st_transform(4326)
-                  
+
+# Wards
+wards = read_sf(here::here(
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  mutate(ward=str_sub(WardPrec, 1, 1)) |> 
+  group_by(ward) |> 
+  summarize() |> 
+  st_transform(4326)
+
+ward_palette = colorFactor(RColorBrewer::brewer.pal(7, 'Pastel1'), wards$ward)
+
 map = leaflet(width='95%', height='700px') %>% 
   setView(-72.667, 42.330, 12) %>% 
   addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
@@ -97,13 +109,15 @@ map = leaflet(width='95%', height='700px') %>%
               group='EJ') |> 
   addPolygons(data=centers, weight=1, fillOpacity=0.1, color='black',
               group='City centers') |> 
- addCircleMarkers(data=shared_qmile, radius=~5, label=~label,
+  addPolygons(data=wards, label=~paste('Ward', ward), group='Wards',
+              weight=1, fillOpacity=0.2, fillColor=~ward_palette(ward)) |> 
+  addCircleMarkers(data=shared_qmile, radius=~5, label=~label,
                    group='Trees',
                    stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
   addLayersControl(baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
-    overlayGroups=c('Trees', 'City centers', 'EJ'),
+    overlayGroups=c('Trees', 'City centers', 'EJ', 'Wards'),
     options=layersControlOptions(collapsed=FALSE)) |> 
-  hideGroup('EJ')
+  hideGroup('Wards')
   
 map
 ```
