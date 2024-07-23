@@ -37,7 +37,7 @@ var viz_params = {
   bands: ['ST_B10'],
   min: 70,
   max: 130,
-  palette: ['#a50026','#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'].reverse()
+//  palette: ['#a50026','#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'].reverse()
 };
 
 var visualization = data_clip.visualize(viz_params);
@@ -46,7 +46,7 @@ var visualization = data_clip.visualize(viz_params);
 // This will save the image to Google Drive
 Export.image.toDrive({
   image: visualization,
-  description: 'Noho_temperature_7_2_2024',
+  description: 'Noho_temperature_7_2_2024_greyscale',
   scale: 30
 });
 
