@@ -1,6 +1,7 @@
 # 8 View Ave helpers
 
 library(tidyverse)
+library(exactextractr)
 library(sf)
 source(here::here('Trees/NLCD_helpers.R'))
 
@@ -27,14 +28,14 @@ trees_21 = read_layer(trees_21_path)
   
 # Some layers have 254 values for NA. Treat them as 0
 trees_21[trees_21==254] = 0
-res_bump=8
-trees_21=terra::disagg(trees_21, res_bump)
+res_bump=1 # No need for this when using exact_extract()
+#trees_21=terra::disagg(trees_21, res_bump)
 
 clip_and_mean_layer(trees_21, project_limit) |> 
   mutate(Coverage_Area=Coverage * Area)
 
-#   Coverage  Area Coverage_Area
-# 1    0.711  2.03          1.44
+#       Area  Coverage Coverage_Area
+# 1 1.683795 0.7223869      1.216351
 
 clipped = mask(trees_21, vect(project_limit))
 plot(crop(clipped, project_limit))
@@ -47,10 +48,28 @@ eversource = read_sf(here::here('8 View Ave/8 View Ave.gpkg'),
 clip_and_mean_layer(trees_21, eversource) |> 
   mutate(Coverage_Area=Coverage * Area)
 
-#   Coverage  Area Coverage_Area
-# 1    0.285 0.754         0.215
+#        Area  Coverage Coverage_Area
+# 1 0.6234037 0.3169654     0.1975974
 
 clipped = mask(trees_21, vect(eversource))
 plot(crop(clipped, eversource))
 plot(eversource, add=T)
+
+# Convert raster values to degrees F
+to_F = function(v) {
+  v/255*(130-70)+70
+}
+
+# Average temperature across wards
+temps = terra::rast(here::here(
+  '8 View Ave/Noho_temperature_7_2_2024_greyscale.tif'
+))
+
+wards = read_sf(here::here(
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  st_transform(crs(temps))
+
+exact_extract(temps, wards, fun='mean', append_cols='WardPrec') |> 
+  mutate(mean=to_F(mean)) |> 
+  arrange(mean)
 
