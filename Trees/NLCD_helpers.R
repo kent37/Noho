@@ -58,7 +58,7 @@ clip_and_count_layer = function(rast, mask) {
   }, summarize_df = TRUE, progress = FALSE)
 }
 
-# Slower version using mask
+# Slower and less accurate version using mask
 clip_and_count_layer_slow = function(rast, mask) {
   clipped = mask(rast, vect(mask))
   counts = table(values(clipped), mat=FALSE) %>% 
@@ -79,6 +79,19 @@ clip_and_mean_all = function(mask) {
 # number of acres in the mask and the mean value
 # as a fractional percent
 clip_and_mean_layer = function(rast, mask) {
+  exactextractr::exact_extract(rast, mask, function(df) {
+    # df has columns `value` and `coverage_fraction` 
+    # with one row per raster cell
+    df %>%
+      summarize(Area = sum(coverage_fraction),
+                Coverage=sum(value*coverage_fraction)/100/Area)
+  }, summarize_df = TRUE, progress = FALSE) |> 
+    mutate(Area = Area * acre_per_raster / res_bump^2)
+}
+
+
+# Slower and less accurate version using mask
+clip_and_mean_layer_slow = function(rast, mask) {
   clipped = mask(rast, vect(mask))
   tibble(
     Coverage=mean(values(clipped), na.rm=TRUE)/100,
