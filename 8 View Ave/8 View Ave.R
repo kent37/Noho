@@ -60,6 +60,9 @@ to_F = function(v) {
   v/255*(130-70)+70
 }
 
+from_F = function(f) {
+  (f-70)/(130-70)*255
+}
 # Average temperature across wards
 temps = terra::rast(here::here(
   '8 View Ave/Noho_temperature_7_2_2024_greyscale.tif'

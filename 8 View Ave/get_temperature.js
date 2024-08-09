@@ -1,6 +1,7 @@
 // This script uses Google Earth Engine to access and download 
 // Landsat temperature data.
 // Use it at https://code.earthengine.google.com/
+// https://earthexplorer.usgs.gov/ is helpful for finding good dates
 
 // Read Landsat images that intersect Northampton
 var dataset = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2')
