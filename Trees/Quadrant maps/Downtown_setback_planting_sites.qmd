@@ -1,0 +1,112 @@
+---
+title: "Northampton city center setback planting sites"
+format:
+  html:
+    embed-resources: true
+    header-includes: '<link rel="icon" type="image/png" href="icons8-oak-tree-48.png">'
+    page-layout: full
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+<style>
+.dataTables_info {
+    padding-right: 20px;
+}
+}
+</style>
+
+Possible setback planting sites in Northampton city center,
+as surveyed by members and volunteers of the 
+Northampton Urban Forestry Commission.
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(leaflet)
+library(sf)
+```
+
+Mouse over a tree location for details.
+
+```{r data, include=FALSE}
+all_match_raw = read_csv(here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
+            na='') |> 
+  select(-geom) |> 
+  distinct(ident, .keep_all=TRUE) |> # Keep only one entry per site (rather than one per owner)
+  # Add location for 11 Conz St
+  mutate(
+    x_proj = if_else(ident == "N3-47", 106795.3, x_proj),
+    y_proj = if_else(ident == "N3-47", 896717.0, y_proj)
+  ) |> 
+  filter(!is.na(x_proj)) |> 
+  st_as_sf(coords=c('x_proj', 'y_proj'), crs='EPSG:26986')
+
+all_match = all_match_raw |> 
+  select(-c(Latitude, Longitude, `Site ID`,
+            `Street number`, `Street name`, `Street ext`)) |> 
+  select(ID=ident, Address, Count=Number, Owner=Ownership, `Under wire`, Location, 
+         everything()) |> 
+  mutate(
+    Comments = if_else(is.na(Comments), '', Comments),
+    Count_str = case_when(
+      Count=='1' ~ '1 tree',
+      is.na(Count) ~ '',
+      .default = str_glue('{Count} trees')
+    ),
+    Location = case_match(Location,
+      'F' ~ 'Front',
+      'S' ~ 'Side',
+      'B' ~ 'Back',
+      'N/A' ~ '',
+      NA ~ '',
+      .default = Location
+    ),
+    Size = str_replace_all(Area, c(S='Small', M='Medium', N='Medium', L='Large')),
+    label=unclass(str_glue('{Address} {Location}, {Size}, {Count_str}<br>{Comments}')) |>
+      lapply(htmltools::HTML),
+    Owner = factor(Owner, levels=c('B', 'C', 'R', 'S', '?')),
+    `Under wire` = if_else(`Under wire` %in% c('1Y, 1N', 'Y/N', 'N/Y'), 'B', `Under wire`),
+         `Under wire` = factor(`Under wire`, levels=c('Y', 'N', 'B', 'X', '?'))) |> 
+  st_transform(4326)
+```
+
+---
+
+```{r map}
+
+# Wards
+wards = read_sf(here::here(
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  mutate(ward=str_sub(WardPrec, 1, 1)) |> 
+  group_by(ward) |> 
+  summarize() |> 
+  st_transform(4326)
+
+ward_palette = colorFactor(RColorBrewer::brewer.pal(7, 'Pastel1'), wards$ward)
+
+bb = unname(st_bbox(all_match))
+
+map = leaflet(width='95%', height='700px') %>% 
+  fitBounds(bb[1], bb[2], bb[3], bb[4]) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
+  addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
+  addPolygons(data=wards, label=~paste('Ward', ward), group='Wards',
+              weight=1, fillOpacity=0.2, fillColor=~ward_palette(ward)) |> 
+  addCircleMarkers(data=all_match, radius=~5, label=~label,
+                   group='Trees',
+                   stroke=FALSE, fillColor="#1B9E77", fillOpacity=0.5) |> 
+  addLayersControl(baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
+    overlayGroups=c('Trees', 'Wards'),
+    options=layersControlOptions(collapsed=FALSE)) |> 
+  hideGroup('Wards')
+  
+map
+```
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
+  src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
+  <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>

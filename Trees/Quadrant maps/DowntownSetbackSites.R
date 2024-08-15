@@ -62,3 +62,15 @@ all_match = all_match |> select(names(qmile_raw |> select(-Sidewalk)), everythin
 write_csv(all_match,
             here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
             na='')
+
+# Read it back
+all_match = read_csv(here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
+            na='') |> 
+  select(-geom) |> 
+  # Add location for 11 Conz St
+  mutate(
+    x_proj = if_else(ident == "N3-47", 106795.3, x_proj),
+    y_proj = if_else(ident == "N3-47", 896717.0, y_proj)
+  ) |> 
+  filter(!is.na(x_proj)) |> 
+  st_as_sf(coords=c('x_proj', 'y_proj'), crs=st_crs(qmile_raw))
