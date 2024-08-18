@@ -83,8 +83,8 @@ clip_and_mean_layer = function(rast, mask) {
     # df has columns `value` and `coverage_fraction` 
     # with one row per raster cell
     df %>%
-      summarize(Area = sum(coverage_fraction),
-                Coverage=sum(value*coverage_fraction)/100/Area)
+      summarize(Area = sum(coverage_fraction, na.rm=TRUE),
+                Coverage=sum(value*coverage_fraction, na.rm=TRUE)/100/Area)
   }, summarize_df = TRUE, progress = FALSE) |> 
     mutate(Area = Area * acre_per_raster / res_bump^2)
 }

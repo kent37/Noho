@@ -203,7 +203,7 @@ centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPo
   st_buffer(-1)
 
 center_coverage = pmap_dfr(centers, function(City, geometry) {
-  clip_and_mean_all(geometry) |> 
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(centers))) |> 
     mutate(City=City, .before=1)
 })
 
@@ -277,7 +277,7 @@ categories.
 zoning = aggregated_zoning() |> 
   st_transform(nlcd_crs)
 zone_coverage = pmap_dfr(zoning, function(Class, geometry) {
-  clip_and_mean_all(geometry) |> 
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(zoning))) |> 
     mutate(Class=Class, .before=1)
 })
 
@@ -347,7 +347,7 @@ This chart show the tree canopy percent within each voting ward and precinct.
 
 ```{r by_ward}
 ward_coverage = pmap_dfr(wards |> select(WardPrec), function(WardPrec, geometry) {
-  clip_and_mean_all(geometry) |> 
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(wards))) |> 
     mutate(WardPrec=WardPrec, .before=1)
 })
 
