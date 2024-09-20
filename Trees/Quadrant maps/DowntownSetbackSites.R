@@ -41,9 +41,11 @@ hand_num = read_csv(
   mutate(`Site ID`=as.character(`Site ID`)) |> 
   select(-geom)
 
-# We have to fix up the geom column. Easiest way is to join with the
+# We have to fix up the geom and Number columns. Easiest way is to join with the
 # original data
-hand_num = hand_num |> left_join(qmile |> select(ident)) |> 
+hand_num = hand_num |> 
+  select(-Number) |> 
+  left_join(qmile |> select(ident, Number)) |> 
   st_as_sf()
 
 hand_num_match = inner_join(hand_num, assess, relationship = "many-to-many",
@@ -59,6 +61,21 @@ all_match = all_match |>
 # Keep the original order
 all_match = all_match |> select(names(qmile_raw |> select(-Sidewalk)), everything())
 
+# Add location for 11 Conz St
+all_match = all_match |> 
+  mutate(
+    x_proj = if_else(ident == "N3-47", 106795.3, x_proj),
+    y_proj = if_else(ident == "N3-47", 896717.0, y_proj)
+  )
+
+# Take out columns that are will be confusing to users
+# Note: ST_NUM and STREET_NAME do not alway match the actual address
+# Some of them were changed in the hand-editing step above to an address
+# that matches the property owner in the assessor's data
+all_match = all_match |> 
+  st_drop_geometry() |> 
+  select(-c(ST_NUM, STREET_NAME, '#', 'REVCODE'))
+
 write_csv(all_match,
             here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
             na='')
@@ -66,11 +83,6 @@ write_csv(all_match,
 # Read it back
 all_match = read_csv(here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
             na='') |> 
-  select(-geom) |> 
-  # Add location for 11 Conz St
-  mutate(
-    x_proj = if_else(ident == "N3-47", 106795.3, x_proj),
-    y_proj = if_else(ident == "N3-47", 896717.0, y_proj)
-  ) |> 
+  select(-geom)  |> 
   filter(!is.na(x_proj)) |> 
   st_as_sf(coords=c('x_proj', 'y_proj'), crs=st_crs(qmile_raw))
