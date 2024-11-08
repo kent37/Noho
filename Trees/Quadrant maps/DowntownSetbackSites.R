@@ -76,9 +76,18 @@ all_match = all_match |>
   st_drop_geometry() |> 
   select(-c(ST_NUM, STREET_NAME, '#', 'REVCODE'))
 
+all_match = all_match |> 
+  # Add location for 11 Conz St
+  mutate(
+    x_proj = if_else(ident == "N3-47", 106795.3, x_proj),
+    y_proj = if_else(ident == "N3-47", 896717.0, y_proj)
+  )
+
 write_csv(all_match,
             here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
             na='')
+
+### HAND EDITING HERE to add 94 State St
 
 # Read it back
 all_match = read_csv(here::here('Trees/Quadrant maps/Downtown_sites_with_owners.csv'),
