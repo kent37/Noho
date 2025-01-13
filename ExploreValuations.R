@@ -100,9 +100,10 @@ popups = unclass(str_glue_data(resid_comm_with_value,
   lapply(htmltools::HTML)
 
 # Color palette
-# These are approximate 10% quantiles
-breaks = c(0, 200000, 300000, 580000, 750000, 970000, 1250000, 1700000, 2250000, 3250000, 90000000)
-pal = colorBin('RdYlBu', 
+# These are approximate 10% quantiles plus 5% and 95%
+breaks = c(0, 100000, 200000, 300000, 580000, 750000, 970000, 1250000, 
+           1700000, 2250000, 3250000, 4250000, 90000000)
+pal = colorBin(colorRampPalette(brewer.pal(11, "RdYlBu"))(length(breaks)-1), 
                bins=breaks,
                domain=resid_comm_with_value$Value_per_acre, 
                reverse=TRUE)
