@@ -4,7 +4,7 @@
 .httr-oauth
 .DS_Store
 DEM
-
 # QGIS temp files
 *.gpkg-shm
 *.gpkg-wal
+Biking potential
