@@ -5,28 +5,41 @@ format:
     embed-resources: true
     link-external-newwindow: true
 editor: visual
+execute:
+  echo: false
+  message: false
+  warning: false
 ---
 
 ```{r}
-#| echo: false
 #| output: false
-#| message: false
-#| warning: false
 source('ExploreValuations.R')
 ```
 
-**Northampton's property values vary greatly based on location and usage.** Single-family homes on larger lots may assess at less than \$10,000 per acre, while commercial and mixed-use properties in the urban center can exceed \$10,000,000 per acre. The median value per acre is 
-`r scales::label_currency()(round(median(resid_comm_with_value$Value_per_acre), -3))`.
+This report examines the 2023 assessed value of residential, commercial and industrial parcels in Northampton. These parcels provide the most of the tax base for the City's real estate tax. Agricultural, recreational, educational, government, and utility parcels provide less property tax income and are not included in the analysis.
 
-**Explore this interactive map** to view assessed values per acre for residential, commercial, and industrial properties throughout Northampton. (Agricultural, recreational, educational, government, and utility parcels are not included.)
+**Northampton's property values vary greatly based on location and usage.** Single-family homes on larger lots may assess at less than \$10,000 per acre, while commercial and mixed-use properties in the urban center can exceed \$10,000,000 per acre. The median value per acre is `r scales::label_currency()(round(median(resid_comm_with_value$Value_per_acre), -3))`.
 
-**Click on any property** for more information and a link to the assessor's card for the property.
+**Less than 10% of acreage provides 50% of the value.** The total assessed value of residential, commercial and industrial properties in Northampton is nearly 3.8 trillion dollars. Half of the assessed value is provided by just `r round(half_value_acres, 0)` acres out of `r label_comma(accuracy=1)(sum(resid_comm_with_value$Acres))` total acres.
 
+```{r}
+hist_value_per_acre
+```
+
+**Explore this interactive map** to view assessed values per acre for residential, commercial, and industrial properties throughout Northampton.
+
+**Click on any property** for more information and a link to the assessor's card for the property.\
+\
+
+::: column-page
 ```{r}
 #| echo: false
 map
 ```
+:::
 
-Map based on 2023 parcel data from [MassGIS](https://www.mass.gov/info-details/massgis-data-property-tax-parcels).
+\
+\
+Analysis based on 2023 parcel data from [MassGIS](https://www.mass.gov/info-details/massgis-data-property-tax-parcels).
 
-<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"> <img src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" target="_blank"/></a> [`r Sys.Date()`]{style="float:right;font-style: italic;"}</small>
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"> <img src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" target="_blank"/></a> [`r Sys.Date()`]{style="float:right;font-style: italic;"}</small> :::

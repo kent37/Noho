@@ -5,6 +5,7 @@ library(tidyverse)
 library(leaflet)
 library(mapview)
 library(RColorBrewer)
+library(scales)
 library(sf)
 
 # Parcels and assessed value from 2023, from MassGIS
@@ -71,7 +72,7 @@ noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg')) |>
   st_transform(4326)
 
 # Mouse-over labels
-format_dollar = scales::label_currency(scale=1/1000, suffix='K')
+format_dollar = label_currency(scale=1/1000, suffix='K')
 labels = unclass(str_glue_data(resid_comm_with_value,
   '{Full_addr}<br>',
   '{format_dollar(round(Value_per_acre, -3))}/acre<br>'
@@ -118,7 +119,7 @@ pal = colorBin(colorRampPalette(brewer.pal(11, "RdYlBu"))(length(breaks)-1),
                domain=resid_comm_with_value$Value_per_acre, 
                reverse=TRUE)
 
-map = leaflet(width='95%', height='700px', resid_comm_with_value) |> 
+map = leaflet(width='95%', height='800px', resid_comm_with_value) |> 
   addPolygons(stroke=TRUE, weight=1, color=~pal(Value_per_acre), opacity=1,
               fillColor = ~pal(Value_per_acre), fillOpacity = 0.8,
               label=labels, popup=popups,
@@ -137,7 +138,7 @@ map
 
 # Explore cumulative value by value_per_acre
 resid_comm_with_value = resid_comm_with_value |> 
-  arrange(Value_per_acre) |> 
+  arrange(desc(Value_per_acre)) |> 
   mutate(cum_acres = cumsum(Acres),
          cum_value = cumsum(TOTAL_VAL))
 
@@ -145,13 +146,13 @@ resid_comm_with_value = resid_comm_with_value |>
 half_value = sum(resid_comm_with_value$TOTAL_VAL)/2
 
 # Which high-value properties make the top half of value?
-half_value_properties = which(resid_comm_with_value$cum_value >= half_value)
+half_value_properties = which(resid_comm_with_value$cum_value <= half_value)
 
 # Cumulative acres at the half-value point
-half_acres = resid_comm_with_value$cum_acres[half_value_properties |> head(1)]
+half_acres = resid_comm_with_value$cum_acres[half_value_properties |> tail(1)]
 
 # Value_per_acre at the half-value point
-half_value_per_acre = resid_comm_with_value$Value_per_acre[half_value_properties |> head(1)]
+half_value_per_acre = resid_comm_with_value$Value_per_acre[half_value_properties |> tail(1)]
 
 # Total acres in the top half of value
 half_value_acres = sum(resid_comm_with_value$Acres[half_value_properties])
@@ -166,18 +167,14 @@ ggplot(resid_comm_with_value, aes(cum_acres, cum_value)) +
   geom_vline(xintercept=half_acres) +
   labs(title='Cumulative value of Northampton properties',
        x='Cumulative acres', y='Cumulative value ($trillion)') +
-  scale_x_continuous(labels=scales::label_comma()) +
-  scale_y_continuous(labels=scales::label_dollar(scale=1e-9, suffix=' T')) +
+  scale_x_continuous(labels=label_comma()) +
+  scale_y_continuous(labels=label_dollar(scale=1e-9, suffix=' T')) +
   theme_minimal()
 
-ggplot(resid_comm_with_value, aes(Acres, Value_per_acre)) + 
-  geom_point() +
-  scale_x_log10() +
-  scale_y_log10()
-
+# Histogram of value per acre
 ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_acre)) +
   geom_histogram(binwidth=200000, aes(fill=after_stat(pal(x)))) +
-  scale_x_continuous(labels=scales::label_dollar(scale=1e-6, suffix=' M'),
+  scale_x_continuous(labels=label_dollar(scale=1e-6, suffix=' M'),
                      breaks = 1:10*1e6, minor_breaks=NULL) +
   geom_vline(xintercept=median(resid_comm_with_value$Value_per_acre),
              linetype=2, color='grey') +
@@ -189,3 +186,39 @@ ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_
   theme_minimal()
 }
 
+# Histogram of value per acre, weighted by acres
+# This shows the number of acres at each valuation, rather
+# than the number of properties
+(hist_value_per_acre = ggplot(resid_comm_with_value |> filter(Value_per_acre<=5000000), aes(Value_per_acre)) +
+  geom_histogram(binwidth=100000, 
+                 aes(weight=Acres, fill=after_stat(pal(x)))) +
+  geom_vline(xintercept=half_value_per_acre,
+             linetype=2, color='grey60') +
+  geom_curve(
+    x = 3000000, y = 2500, xend = 500000, yend = 1500,
+    arrow = arrow(length = unit(0.3, "cm")),
+    curvature = 0.3,
+    color='grey40'
+  ) +
+  geom_curve(
+    x = 3000000, y = 2500, xend = 2100000, yend = 1500,
+    arrow = arrow(length = unit(0.3, "cm")),
+    curvature = 0.3,
+    color='grey40'
+  ) +
+  annotate("text", x = 3100000, y = 2500, 
+           label = "Properties on each side\nof the dashed line provide\nhalf of total assessed value", 
+           fontface='bold', hjust = 0) +
+  scale_x_continuous(labels=label_dollar(scale=1e-6, suffix=' M'),
+                     breaks = 1:5*1e6, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL) +
+  scale_fill_identity() +
+  labs(x='Value per acre ($million)', y='Number of acres',
+       title='Most properties have relatively low value per acre',
+       subtitle=glue::glue('Properties valued over {label_currency(scale=1e-6, suffix=" million")(half_value_per_acre)} ',
+       'per acre provide half the total valuation'),
+       caption='Data: MassGIS | Analysis: Kent Johnson') +
+  theme_minimal() +
+  theme(plot.title=element_text(face='bold'),
+        axis.title=element_text(face='bold'))
+)
