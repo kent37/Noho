@@ -111,16 +111,27 @@ tree_count = function(count) {
   if_else(count==1, '1 tree', paste(count, 'trees'))
 }
 
+plant_dates = function(dates) {
+  dates = str_extract(unlist(dates), '\\d{4}') # Just the year
+  if (length(dates)==1)
+    dates
+  else
+    paste0(min(dates), '-', max(dates))
+}
+
 map_data = planted |> 
   filter(!dead) |> 
   group_by(Num, Street, Ward) |> 
   summarize(count=n(),
             name_label=summarize_names(`Common Name`),
             Location=str_c(sort(unique(Location)), collapse=','),
+            plant_dates = plant_dates(list(unique(`Date Planted`))),
             .groups='drop'
   ) |> 
   mutate(address=str_to_title(if_else(is.na(Num), Street, paste(Num, Street))),
-         label=paste0(address, ' (', tree_count(count), ')<br><br>', name_label) |> 
+         label=paste0(address, ' (', tree_count(count), ')<br>',
+                      plant_dates, '<br><br>', 
+                      name_label) |> 
            lapply(htmltools::HTML) |> unname())
 
 map_data = 
