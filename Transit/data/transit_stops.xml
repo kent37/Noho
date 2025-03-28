@@ -1,0 +1,1226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Overpass API 0.7.62.5 1bd436f1">
+<note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note>
+<!--
+// Overpass query
+[out:xml];
+(
+  // Get all bus stops
+  node["highway"="bus_stop"]({{bbox}});
+  
+  // Get all tram stops
+  node["railway"="tram_stop"]({{bbox}});
+  
+  // Get all subway/metro stations
+  node["railway"="station"]["station"="subway"]({{bbox}});
+  node["railway"="station"]["subway"="yes"]({{bbox}});
+  
+  // Get all rail stations 
+  node["railway"="station"]["station"!="subway"]({{bbox}});
+  
+  // Get all light rail stations
+  node["railway"="station"]["light_rail"="yes"]({{bbox}});
+  
+  // Get ferry terminals
+  node["amenity"="ferry_terminal"]({{bbox}});
+);
+out meta;
+-->
+<meta osm_base="2025-03-07T16:19:28Z"/>
+
+  <node id="1408370530" lat="42.3176652" lon="-72.6331165" version="6" timestamp="2021-03-31T11:01:16Z" changeset="102050143" uid="12621584" user="David Xīzàng">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Academy of Music - Northampton"/>
+    <tag k="network" v="FRTA"/>
+    <tag k="ref" v="S25"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408370942" lat="42.3339880" lon="-72.6431050" version="3" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="BARRETT / JACKSON"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="213"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408370953" lat="42.3340800" lon="-72.6435470" version="3" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="BARRETT / JACKSON"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="212"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408370979" lat="42.3334430" lon="-72.6361690" version="4" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="BARRETT / KING"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="218"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408370983" lat="42.3335000" lon="-72.6364820" version="4" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="BARRETT / KING"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="216"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408372540" lat="42.3382840" lon="-72.6487810" version="4" timestamp="2021-11-06T20:40:06Z" changeset="113460672" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="BRIDGE / HATFIELD"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="189"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408372830" lat="42.3337400" lon="-72.6398320" version="4" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Barrett/Hathaway Farms (inbound)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="215"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408372840" lat="42.3337820" lon="-72.6399690" version="4" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Barrett/Hathaway Farms (outbound)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="214"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408372912" lat="42.3374330" lon="-72.6063460" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Bay Road DC (E)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="8022"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408372924" lat="42.3376880" lon="-72.6064300" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Bay Road DC (W)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="8020"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408373640" lat="42.3414964" lon="-72.6410866" version="3" timestamp="2021-11-06T20:34:10Z" changeset="113460539" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Big Y/Wal-Mart"/>
+    <tag k="network" v="FRTA"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="S51"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408373946" lat="42.3767660" lon="-72.7059560" version="2" timestamp="2019-01-11T22:43:00Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Brassworks IB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9011"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408374813" lat="42.3350140" lon="-72.6675870" version="8" timestamp="2021-10-01T20:12:12Z" changeset="111980200" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Chestnut/Main"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="207"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408376553" lat="42.3153570" lon="-72.5759200" version="2" timestamp="2019-01-11T22:43:02Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Chumura Road (N)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9058"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408376559" lat="42.3154300" lon="-72.5759890" version="2" timestamp="2019-01-11T22:43:02Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Chumura Road (S)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9059"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408376930" lat="42.3132320" lon="-72.6268920" version="2" timestamp="2019-01-11T22:43:04Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Conz St/ Dialysis Center"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="268"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408376949" lat="42.3312150" lon="-72.6765290" version="6" timestamp="2021-10-28T19:57:38Z" changeset="113096465" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Corticelli/ Pine OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="9007"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377320" lat="42.3329286" lon="-72.6215615" version="5" timestamp="2022-05-26T18:41:41Z" changeset="121540996" uid="15438722" user="RedEyedVireo">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Damon Road"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="219"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="no"/>
+  </node>
+  <node id="1408377529" lat="42.3261380" lon="-72.6496960" version="2" timestamp="2019-01-11T22:43:09Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Elm/Connecting Road (Child's Park)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="234"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377530" lat="42.3251800" lon="-72.6493910" version="2" timestamp="2019-01-11T22:43:09Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Elm/Connecting Road (Northampton High School)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="235"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377561" lat="42.3299870" lon="-72.6787570" version="7" timestamp="2021-12-02T22:35:44Z" changeset="114500694" uid="6641970" user="CurlingMan13">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="FLORENCE / RYAN"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="227"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408377580" lat="42.3137470" lon="-72.6295550" version="2" timestamp="2019-01-11T22:43:10Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="FRUIT / SMITH"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="266"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377614" lat="42.3266260" lon="-72.6775130" version="6" timestamp="2021-09-20T12:28:37Z" changeset="111447690" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Florence &amp; Scanlon (Flag stop - signal driver)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="5073"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408377615" lat="42.3355060" lon="-72.6723630" version="7" timestamp="2021-11-06T23:47:11Z" changeset="113464486" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Florence Center"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="204"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408377616" lat="42.3238129" lon="-72.6767152" version="6" timestamp="2021-08-10T13:47:05Z" changeset="109466340" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Florence Heights"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="237"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408377624" lat="42.3372690" lon="-72.6705470" version="5" timestamp="2021-11-06T23:47:11Z" changeset="113464486" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Forsander Apt."/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="192"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377703" lat="42.3151320" lon="-72.6317290" version="2" timestamp="2019-01-11T22:43:13Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Fruit St/ Old South St"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="263"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408377936" lat="42.3385510" lon="-72.6482700" version="4" timestamp="2021-11-06T20:40:06Z" changeset="113460672" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="HATFIELD / BRIDGE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="188"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378022" lat="42.3073160" lon="-72.6585770" version="2" timestamp="2019-01-11T22:43:18Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Hampshire County House of Corrections"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9095"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378028" lat="42.3407330" lon="-72.6420750" version="3" timestamp="2021-11-06T20:34:10Z" changeset="113460539" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Hampshire Plaza/ Big Y"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="170"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378146" lat="42.3743210" lon="-72.7018360" version="2" timestamp="2019-01-11T22:43:19Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Haydenville Center OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="100"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378151" lat="42.3742070" lon="-72.7018510" version="2" timestamp="2019-01-11T22:43:19Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Haydenville IB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="101"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378367" lat="42.3371120" lon="-72.6427000" version="3" timestamp="2021-11-06T20:40:06Z" changeset="113460672" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Jackson/Gleason (Hampshire Heights)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="194"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378368" lat="42.3358000" lon="-72.6435780" version="3" timestamp="2021-11-06T20:40:06Z" changeset="113460672" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Jackson/Jackson (Jackson St. School)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="202"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378411" lat="42.3205870" lon="-72.6309050" version="3" timestamp="2021-03-07T22:32:00Z" changeset="100594565" uid="4467002" user="kstrikis">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="King/Allen (Hotel Northampton)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="246"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378412" lat="42.3235090" lon="-72.6324160" version="5" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="check_date" v="2011-08-22"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="King/Bright (Dunkin' Donuts)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="242"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378413" lat="42.3288000" lon="-72.6335370" version="3" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="King/Church (Wendy's)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="233"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378414" lat="42.3199898" lon="-72.6301415" version="4" timestamp="2019-01-11T22:43:24Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="King/Merrick (Calvin Theatre)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="249"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408378415" lat="42.3234710" lon="-72.6325300" version="3" timestamp="2023-10-27T13:13:23Z" changeset="143211119" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="King/North (Cumberland Farms)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="239"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378463" lat="42.3314900" lon="-72.6532140" version="7" timestamp="2023-07-30T19:30:00Z" changeset="139223543" uid="20019393" user="Splort">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="lit" v="no"/>
+    <tag k="name" v="LOCUST / PROSPECT"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="224"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408378464" lat="42.3316570" lon="-72.6531830" version="2" timestamp="2019-01-11T22:43:24Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="LOCUST / PROSPECT"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="223"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378506" lat="42.3535080" lon="-72.6999210" version="3" timestamp="2021-11-07T00:35:06Z" changeset="113464975" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Leeds"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="143"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378680" lat="42.3441470" lon="-72.6819610" version="3" timestamp="2021-11-06T23:54:35Z" changeset="113464590" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Look Park OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="9161"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378814" lat="42.3356170" lon="-72.6721570" version="7" timestamp="2021-10-13T20:58:32Z" changeset="112478958" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MAIN / MAPLE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="203"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408378847" lat="42.3443570" lon="-72.6823500" version="3" timestamp="2021-11-06T23:54:35Z" changeset="113464590" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MAIN / STATE HWY 9"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="163"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378870" lat="42.3321990" lon="-72.6721120" version="7" timestamp="2021-11-06T23:54:35Z" changeset="113464590" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MAPLE / PINE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="220"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408378892" lat="42.3363720" lon="-72.6613160" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / STRAW"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="199"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378893" lat="42.3365210" lon="-72.6611330" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / STRAW"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="200"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378894" lat="42.3366700" lon="-72.6611400" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="190"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378896" lat="42.3375820" lon="-72.6610570" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="191"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378900" lat="42.3392180" lon="-72.6605530" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="177"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378901" lat="42.3393210" lon="-72.6604770" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="182"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408378902" lat="42.3394740" lon="-72.6604920" version="3" timestamp="2021-11-06T20:42:47Z" changeset="113460741" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="MEADOWBROOK APARTMENTS / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="180"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408379132" lat="42.3348200" lon="-72.6684340" version="7" timestamp="2021-08-20T16:12:31Z" changeset="109995883" uid="12907679" user="Zachary W">
+    <tag k="address" v="52 Main St."/>
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Main/Wilder"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="209"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408379151" lat="42.3359790" lon="-72.6720120" version="6" timestamp="2021-11-06T23:47:11Z" changeset="113464486" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Maple/Main (High St. Variant)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="201"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408379152" lat="42.3348460" lon="-72.6720500" version="7" timestamp="2021-10-28T19:57:38Z" changeset="113096465" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Maple/Main (outbound)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="208"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408379204" lat="42.3178410" lon="-72.6332320" version="6" timestamp="2022-07-29T19:24:06Z" changeset="124244860" uid="13982364" user="Mad-Mapper">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bin" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Masonic St/ Academy of Music OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="260"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408379368" lat="42.3343580" lon="-72.5881040" version="2" timestamp="2019-01-11T22:43:33Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Middle Street &amp; Rt 47 (E)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="8018"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380044" lat="42.3192910" lon="-72.6303155" version="5" timestamp="2022-08-31T15:19:28Z" changeset="125617466" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Northampton Court House"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="254"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408380045" lat="42.3179440" lon="-72.6275020" version="2" timestamp="2019-01-11T22:43:39Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Northampton Lodging"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="259"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380046" lat="42.3215776" lon="-72.6270984" version="4" timestamp="2019-01-11T22:43:39Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Northampton Post Office"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="244"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408380059" lat="42.2849620" lon="-72.6560900" version="3" timestamp="2023-10-27T13:26:13Z" changeset="143211673" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="ONEIL / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="284"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380060" lat="42.2849690" lon="-72.6561890" version="3" timestamp="2023-10-27T13:26:13Z" changeset="143211673" uid="11583057" user="imamapperguy">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="ONEIL / UNNAMED STREET"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="283"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380186" lat="42.3311500" lon="-72.6764530" version="6" timestamp="2021-10-28T19:57:38Z" changeset="113096465" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="PINE / CORTICELLI"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="225"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380529" lat="42.3150020" lon="-72.6252520" version="3" timestamp="2023-07-14T23:50:55Z" changeset="138527438" uid="501502" user="micah">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Pleasant St/ Hockanum Rd OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="262"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380685" lat="42.3197210" lon="-72.6374740" version="3" timestamp="2019-01-11T22:43:46Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Prospect St"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="252"/>
+  </node>
+  <node id="1408380747" lat="42.3431320" lon="-72.5814290" version="5" timestamp="2023-04-22T21:10:27Z" changeset="135243695" uid="1084189" user="lmum">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / EAST"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="169"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380748" lat="42.3406940" lon="-72.6014940" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / ELMWOOD"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="176"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380749" lat="42.3409190" lon="-72.6013720" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / ELMWOOD"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="175"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380750" lat="42.3422010" lon="-72.5893550" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / MIDDLE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="172"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380751" lat="42.3423460" lon="-72.5886760" version="4" timestamp="2023-04-22T21:11:42Z" changeset="135243693" uid="1084189" user="lmum">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / MIDDLE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="171"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380752" lat="42.3457490" lon="-72.5754620" version="3" timestamp="2021-08-15T15:57:33Z" changeset="109706357" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / NASHUA"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="161"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380753" lat="42.3470730" lon="-72.5726240" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / SPRUCE HILL"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="159"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380754" lat="42.3471150" lon="-72.5723720" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / SPRUCE HILL"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="160"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380755" lat="42.3420140" lon="-72.5960770" version="3" timestamp="2021-11-07T00:47:54Z" changeset="113465077" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / STATE HWY 9"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="173"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380756" lat="42.3419530" lon="-72.5944290" version="3" timestamp="2021-11-07T00:47:54Z" changeset="113465077" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="RUSSELL / WEST"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="174"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380875" lat="42.3399280" lon="-72.6067120" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Russell/Bay"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="178"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380876" lat="42.3396910" lon="-72.6070330" version="3" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Russell/Bay (Barn Shops)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="183"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380878" lat="42.3437690" lon="-72.5794680" version="4" timestamp="2021-08-15T15:56:24Z" changeset="109706320" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Russell/East (RMV)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="168"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380879" lat="42.3459660" lon="-72.5748060" version="3" timestamp="2021-08-15T15:57:33Z" changeset="109706357" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="departures_board" v="no"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Russell/Pine Hill"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="162"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408380884" lat="42.3298950" lon="-72.6786190" version="7" timestamp="2021-12-02T22:35:44Z" changeset="114500694" uid="6641970" user="CurlingMan13">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Ryan/ Spring OB"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="9008"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408381318" lat="42.3346560" lon="-72.6637730" version="7" timestamp="2021-12-02T16:09:53Z" changeset="114489423" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="STRAW / BERKSHIRE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="210"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408381322" lat="42.3349720" lon="-72.6635970" version="3" timestamp="2021-11-06T20:50:18Z" changeset="113460911" uid="9509339" user="KB-01">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="STRAW / BERKSHIRE"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="211"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408381440" lat="42.3289380" lon="-72.6241150" version="3" timestamp="2019-01-11T22:43:53Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Sheldon Field (E)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="230"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408381441" lat="42.3289220" lon="-72.6242680" version="3" timestamp="2019-01-11T22:43:53Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Sheldon Field (W)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="229"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408381461" lat="42.2994000" lon="-72.6022110" version="2" timestamp="2019-01-11T22:43:54Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Skinner Mountain (N)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="8016"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408381462" lat="42.2991980" lon="-72.6025240" version="2" timestamp="2019-01-11T22:43:54Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Skinner Mountain (S)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="8017"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408381587" lat="42.3301200" lon="-72.6751250" version="7" timestamp="2021-10-28T19:57:38Z" changeset="113096465" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Starlite Center"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="226"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1408381643" lat="42.3294750" lon="-72.6361690" version="3" timestamp="2021-08-03T14:50:37Z" changeset="109099897" uid="12907679" user="Zachary W">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Stop &amp; Shop"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="network:wikipedia" v="en:Pioneer Valley Transit Authority"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="228"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408381861" lat="42.3184620" lon="-72.6311420" version="6" timestamp="2021-10-12T18:52:41Z" changeset="112431129" uid="2320956" user="smichel17">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="no"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Thornes Market (R44 Only)"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="256"/>
+    <tag k="shelter" v="no"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1408381975" lat="42.3512880" lon="-72.6821750" version="2" timestamp="2019-01-11T22:44:03Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="VA Medical Center"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="150"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408383070" lat="42.3133280" lon="-72.6276250" version="2" timestamp="2019-01-11T22:44:07Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Walter Salvo House"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="267"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408383304" lat="42.3919980" lon="-72.7297060" version="2" timestamp="2019-01-11T22:44:09Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Williamsburg Center/ Grange Hall"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="55"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1408383404" lat="42.3336830" lon="-72.6295010" version="3" timestamp="2019-01-11T22:44:11Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="54 Industrial Drive"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9012"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="wheelchair" v="yes"/>
+  </node>
+  <node id="1674679046" lat="42.3176813" lon="-72.6333232" version="6" timestamp="2023-12-05T23:24:14Z" changeset="144809628" uid="1239330" user="Matthew Grund">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bench" v="yes"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Academy of Music"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="network:wikidata" v="Q7196828"/>
+    <tag k="public_transport" v="platform"/>
+    <tag k="ref" v="261"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="source" v="massdot_import_081511"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="1674679047" lat="42.3166108" lon="-72.6316099" version="2" timestamp="2019-01-11T22:44:11Z" changeset="66241095" uid="8107451" user="njtbusfan">
+    <tag k="attribution" v="massDOT"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="name" v="Crafts Ave/ Peter Pan"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="9160"/>
+    <tag k="source" v="massdot_import_081511"/>
+  </node>
+  <node id="1674756098" lat="42.3196141" lon="-72.6375832" version="7" timestamp="2022-07-29T19:23:47Z" changeset="124244864" uid="13982364" user="Mad-Mapper">
+    <tag k="bench" v="yes"/>
+    <tag k="bin" v="no"/>
+    <tag k="bus" v="yes"/>
+    <tag k="highway" v="bus_stop"/>
+    <tag k="lit" v="yes"/>
+    <tag k="name" v="Smith College"/>
+    <tag k="network" v="PVTA"/>
+    <tag k="ref" v="251"/>
+    <tag k="shelter" v="yes"/>
+    <tag k="tactile_paving" v="no"/>
+  </node>
+  <node id="3671055665" lat="42.3188119" lon="-72.6264014" version="11" timestamp="2022-05-07T23:41:02Z" changeset="120685388" uid="3103022" user="Channel91">
+    <tag k="addr:city" v="Northampton"/>
+    <tag k="addr:housenumber" v="170"/>
+    <tag k="addr:postcode" v="01060"/>
+    <tag k="addr:state" v="MA"/>
+    <tag k="addr:street" v="Pleasant Street"/>
+    <tag k="internet_access" v="no"/>
+    <tag k="name" v="Northampton"/>
+    <tag k="network" v="Amtrak"/>
+    <tag k="operator" v="Amtrak"/>
+    <tag k="public_transport" v="station"/>
+    <tag k="railway" v="station"/>
+    <tag k="railway:ref" v="NHT"/>
+    <tag k="train" v="yes"/>
+    <tag k="website" v="https://www.amtrak.com/stations/nht"/>
+    <tag k="wheelchair" v="yes"/>
+    <tag k="wikidata" v="Q7057580"/>
+  </node>
+
+</osm>

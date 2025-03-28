@@ -1,0 +1,5 @@
+PVTA_stops.geojson based on GTFS data downloaded from https://mobilitydatabase.org/feeds/gtfs/mdb-1234 and converted to GeoJSON with the GTFS-GO QGIS plugin. This data seems to be current as of Mar 15, 2024.
+
+transit_stops.xml is from OpenStreenMap / Overpass. See the file for the Overpass query used.
+
+The GTFS data shows more stops.
