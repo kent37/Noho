@@ -137,6 +137,42 @@ pal = colorBin(colorRampPalette(brewer.pal(11, "RdYlBu"))(length(breaks)-1),
     options=layersControlOptions(collapsed=FALSE))
 )
 
+
+if (FALSE) {
+  # rayshader experiments, not successful...
+library(rayshader)
+(static_map_height = ggplot(resid_comm_with_value) +
+  geom_sf(aes(fill = Value_per_acre), color=NA) +
+  # scale_fill_viridis_b(option='turbo', breaks=breaks,
+  #                      labels=format_dollar) +
+  scale_fill_viridis_b(guide=NULL) +
+  theme_void() +
+#  labs(fill = "Value per acre") +
+  guides(fill=NULL)
+)
+  
+(static_map_surface = ggplot(resid_comm_with_value) +
+  geom_sf(aes(fill = Value_per_acre), color=NA) +
+  scale_fill_viridis_b(option='turbo', breaks=breaks,
+                       labels=format_dollar, guide=NULL) +
+  theme_void() +
+  labs(fill = "Value per acre") +
+  guides(fill=NULL)
+)
+static_map_3d = plot_gg(static_map_surface, ggobj_height=static_map_height,
+        multicore=TRUE,width=8,height=8,scale=500,
+        height_aes='fill', shadow=FALSE, background="white")
+
+dist = ecdf(resid_comm_with_value$Value_per_acre)
+gg_nc = ggplot(resid_comm_with_value) +
+  geom_sf(aes(fill = dist(Value_per_acre))) +
+  viridis::scale_fill_viridis("Value") +
+  ggtitle("Value of properties in Northampton") +
+  theme_bw()
+
+plot_gg(gg_nc, multicore = TRUE, width = 6 ,height=6, scale=500)
+}
+
 # Explore cumulative value by value_per_acre
 resid_comm_with_value = resid_comm_with_value |> 
   arrange(desc(Value_per_acre)) |> 
@@ -163,6 +199,11 @@ half_value_acres = sum(resid_comm_with_value$Acres[half_value_properties])
 
 # Number of properties in the top half of value
 half_value_count = length(half_value_properties)
+
+theme_set(theme_minimal() +
+  theme(plot.title=element_text(face='bold'),
+        axis.title=element_text(face='bold'))
+)
 
 if (FALSE) {
 ggplot(resid_comm_with_value, aes(cum_acres, cum_value)) +
@@ -238,8 +279,35 @@ ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_
        title='Most properties have relatively low value per acre',
        subtitle=glue('Properties valued over {half_value_per_acre_pretty} ',
        'per acre provide half the total valuation'),
-       caption='Data: MassGIS | Analysis: Kent Johnson') +
-  theme_minimal() +
-  theme(plot.title=element_text(face='bold'),
-        axis.title=element_text(face='bold'))
+       caption='Data: MassGIS | Analysis: Kent Johnson')
 )
+
+# Value per acre is inversely related to acres on a log scale
+(plot_value_per_acre = ggplot(resid_comm_with_value, aes(Acres, Value_per_acre)) + 
+  geom_point(color='steelblue', size=1) +
+  scale_x_log10(labels=label_number()) + 
+  scale_y_log10(labels=label_dollar(scale=1e-6, suffix=' M')) + 
+#  scale_color_identity() +
+  geom_smooth(color='darkslategrey', method=lm) +
+  labs(y='Value per acre ($M)', 
+       title='Larger properties have lower value per acre')
+)
+if (FALSE) {
+# Look at value by zoning category
+# This reads in zoning info...
+source(here::here('Trees/NLCD_helpers.R'))
+summary_zones = aggregated_zoning() |> 
+  st_transform(st_crs(resid_comm_with_value))
+
+resid_comm_with_value = st_make_valid(resid_comm_with_value)
+# resid_with_zone = 
+#   st_join(resid_comm_with_value, summary_zones, join=st_covers)
+
+resid_with_zone = st_intersection(resid_comm_with_value, summary_zones)
+value_by_zone = resid_with_zone |> 
+  st_drop_geometry() |> 
+  summarize(Value = sum(TOTAL_VAL),
+            Acres = sum(Acres),
+            Value_per_acre = Value/Acres,
+            .by=Class)
+}
