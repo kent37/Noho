@@ -1,0 +1,57 @@
+---
+title: "Tree canopy and heat islands in Northampton"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+source('Temp_vs_canopy.R')
+```
+
+## Northampton heat islands
+
+Northampton has significant heat islands in the downtown area, the King Street corridor, Florence center, Cooley Dickinson / Smith Vocational School, and other areas.
+
+Heat islands are clearly visible on this map of surface temperature at 11:30 am on July 2, 2024.
+
+![](Northampton%20heat%20islands.png){fig-alt="Northampton heat islands"}
+
+## Heat islands and tree canopy
+
+The heat islands are all associated with low tree canopy. These maps show surface temperature and tree canopy separately:
+
+```{r}
+#| label: p1
+#| fig-height: 3.5
+patchwork1
+```
+
+When the **two maps are overlaid**, the relationship between tree canopy and heat is clear: hotter areas have lower canopy. Areas shown in [**pink**]{style="color: #b673a0;"} have high temperatures and low canopy. Areas in [**green**]{style="color: #5bb27f;"} have low temperature and high canopy.
+
+```{r}
+#| label: p2
+patchwork2
+```
+
+Plotting temperature against canopy coverage also shows the relationship between the two:
+
+```{r}
+#| label: p3
+patchwork3
+```
+
+### Sources
+
+Temperature data: Landsat 9\
+Canopy data: [Multi-Resolution Land Characteristics (MRLC) Consortium](https://www.mrlc.gov/)\
+Analysis: Kent S Johnson
+
+<small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"> <img src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" target="_blank"/></a> [`r Sys.Date()`]{style="float:right;font-style: italic;"}</small>
