@@ -1,0 +1,74 @@
+---
+title: "Northampton tree planting 2015-2023"
+format: 
+  dashboard:
+    embed-resources: true
+editor: visual
+---
+
+# Map
+
+```{r}
+# Tree planting by year
+library(leaflet)
+
+# Planting data
+source(here::here('Trees/Read_and_clean_planting.R'))
+
+# Based on Read_and_clear_plantings but separated by year
+map_data = planted |> 
+  filter(!dead) |> 
+  group_by(Num, Street, Ward, Year) |> 
+  summarize(count=n(),
+            name_label=summarize_names(`Common Name`),
+            Location=str_c(sort(unique(Location)), collapse=','),
+            plant_dates = plant_dates(list(unique(`Date Planted`))),
+            .groups='drop'
+  ) |> 
+  mutate(address=str_to_title(if_else(is.na(Num), 
+                                      Street, paste(Num, Street))),
+         label=paste0(address, ' (', tree_count(count), ')<br>',
+                      plant_dates, '<br><br>', 
+                      name_label) |> 
+           lapply(htmltools::HTML) |> unname())
+
+map_data = 
+  inner_join(map_data, planting_locations) |> 
+  st_as_sf()
+
+# Add data for a single year to the map
+add_year = function(year, color) {
+  data = map_data |> filter(Year==year)
+  map <<- map |> 
+      addCircleMarkers(data=data, radius=~5+sqrt(count), label=~label,
+                   group=as.character(year),
+                   stroke=FALSE, fillColor=color, fillOpacity=0.8)
+}
+
+# Not many choices of palette for 9+ categories
+#colors = RColorBrewer::brewer.pal(n_distinct(map_data$Year), 'Paired')
+colors = pals::trubetskoy(9)
+years = do.call(seq, range(map_data$Year) |> as.list())
+
+# Base map
+map = leaflet() |> 
+  setView(-72.667, 42.330, 13) |> 
+  addProviderTiles('CartoDB.Voyager', group='Street') |> 
+  addProviderTiles('Esri.WorldImagery', group='Satellite')
+
+# Add years
+pwalk(list(color=colors, year=years), add_year)
+
+# Final map
+map |> 
+  addLayersControl(baseGroups=c('Street', 'Satellite'),
+    overlayGroups=as.character(years),
+    options=layersControlOptions(collapsed=FALSE))
+
+```
+
+# About
+
+This map shows surviving tree plantings for the City of Northampton in the years 2015 to 2023.
+
+Tree planting data from the City Tree Warden. Map by Kent S Johnson.

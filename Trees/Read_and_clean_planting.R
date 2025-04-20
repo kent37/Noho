@@ -1,6 +1,7 @@
 # Read and clean Noho tree planting data
 library(tidyverse)
 library(googlesheets4)
+library(sf)
 source(here::here('Trees/Binomial_name.R'))
 
 planted_raw = read_sheet(
@@ -113,6 +114,7 @@ tree_count = function(count) {
 
 plant_dates = function(dates) {
   dates = str_extract(unlist(dates), '\\d{4}') # Just the year
+  dates = unique(dates)
   if (length(dates)==1)
     dates
   else
