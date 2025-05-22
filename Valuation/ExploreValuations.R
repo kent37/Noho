@@ -9,8 +9,8 @@ library(RColorBrewer)
 library(scales)
 library(sf)
 
-# Parcels and assessed value from 2023, from MassGIS
-path = here::here('Shapefiles/M214_parcels_gdb.zip')
+# Parcels and assessed value from 2025, from Northampton GIS
+path = here::here('Shapefiles/M214_20250515.gdb.zip')
 #st_layers(path)
 lots = read_sf(path, 'M214TaxPar')
 
@@ -31,12 +31,13 @@ resid_comm = assess |>
            c('31A-067-001', '31B-201-001') # Dorms classed as residential
          )
 
+# For 2023 data only
 # Fairway Village parcels seem to be misplaced
 # Properties that are listed in parcel M_101792_899847
 # are really in M_101713_899760
-resid_comm = resid_comm |> 
-  mutate(LOC_ID = 
-    if_else(LOC_ID=='M_101792_899847', 'M_101713_899760', LOC_ID))
+# resid_comm = resid_comm |> 
+#   mutate(LOC_ID = 
+#     if_else(LOC_ID=='M_101792_899847', 'M_101713_899760', LOC_ID))
 
 # Compute total value per location
 # This aggregates the properties on a single lot, e.g. condos
@@ -52,12 +53,10 @@ value_by_locid = resid_comm |>
 sq_meter_per_acre = 4046.86
 lots_with_value = value_by_locid |> 
   left_join(lots) |> 
-  mutate(SHAPE = SHAPE |> st_cast('MULTIPOLYGON'), # mapview needs this...
-         Acres = SHAPE_Area / sq_meter_per_acre,
+  mutate(Shape = Shape |> st_cast('MULTIPOLYGON'), # mapview needs this...
+         Acres = Shape_Area / sq_meter_per_acre,
          Value_per_acre = TOTAL_VAL/Acres) |>
   st_as_sf()
-
-# mapview(lots_with_value, zcol='Value_per_acre')
 
 resid_comm_with_value = lots_with_value |> 
   mutate(Full_addr = str_to_title(if_else(is.na(ADDR_NUM), 
@@ -65,15 +64,27 @@ resid_comm_with_value = lots_with_value |>
                                           paste(ADDR_NUM, FULL_STR)))) |> 
   st_transform('+proj=longlat +datum=WGS84')
 
+# mapview(resid_comm_with_value |> select(LOC_ID, Full_addr, Value_per_acre), 
+#         zcol='Value_per_acre')
+
 # What is the average value per acre?
 #sum(resid_comm_with_value$TOTAL_VAL)/sum(resid_comm_with_value$Acres)
-# 424366.1
+# 562900.8
 
 noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg')) |> 
   st_transform(4326)
 
 # Mouse-over labels
-format_dollar = label_currency(scale=1/1000, suffix='K')
+format_dollar = function(values) {
+  # Use map instead of vectorized label_dollar to get varying decimal places
+  map_chr(values, function(value) {
+    if(value < 1e6)
+      label_dollar(scale=1e-3, suffix='K')(value)
+    else
+      label_dollar(scale=1e-6, suffix='M')(value)
+  })
+}
+
 labels = unclass(str_glue_data(resid_comm_with_value,
   '{Full_addr}<br>',
   '{format_dollar(round(Value_per_acre, -3))}/acre<br>'
@@ -113,12 +124,21 @@ popups = unclass(str_glue_data(resid_comm_with_value,
 
 # Color palette
 # These are approximate 10% quantiles plus 5% and 95% and 99%
-breaks = c(0, 100000, 200000, 400000, 600000, 750000, 1000000, 1250000, 
+breaks = c(0, 150000, 300000, 600000, 850000, 1100000, 1450000, 1900000, 
+           2500000, 3400000, 4800000, 6000000, 15000000, 70000000)
+
+# 2023 values
+breaks_23 = c(0, 100000, 200000, 400000, 600000, 750000, 1000000, 1250000,
            1750000, 2250000, 3250000, 4250000, 11000000, 44000000)
 pal = colorBin(colorRampPalette(brewer.pal(11, "RdYlBu"))(length(breaks)-1), 
                bins=breaks,
                domain=resid_comm_with_value$Value_per_acre, 
                reverse=TRUE)
+
+label_format = function(type, values) {
+  labels = format_dollar(values)
+  paste0(labels[-length(labels)], ' – ', labels[-1])
+}
 
 (map = leaflet(width='95%', height='800px', resid_comm_with_value) |> 
   addPolygons(stroke=TRUE, weight=1, color=~pal(Value_per_acre), opacity=1,
@@ -130,8 +150,8 @@ pal = colorBin(colorRampPalette(brewer.pal(11, "RdYlBu"))(length(breaks)-1),
   addProviderTiles('Stadia.StamenTonerLite', group='Street') |> 
   addProviderTiles('Esri.WorldImagery', group='Satellite') |>  
   addLegend(pal=pal, values=~Value_per_acre, 
-            title='Value per acre ($1000\'s)',
-            labFormat=labelFormat('$', 'K', transform=function(x) x/1000)) |> 
+            title='Value per acre',
+            labFormat=label_format) |> 
   addLayersControl(baseGroups=c('Street', 'Satellite'),
     overlayGroups=c('Value per acre'),
     options=layersControlOptions(collapsed=FALSE))
@@ -244,7 +264,7 @@ ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_
     
   # Annotate the left side
   geom_curve(
-    x = 2500000, y = 2800, xend = 500000, yend = 1500,
+    x = 2500000, y = 2800, xend = 750000, yend = 1500,
     arrow = arrow(length = unit(0.3, "cm")),
     curvature = 0.3,
     color='grey40'
@@ -256,7 +276,7 @@ ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_
     
   # Annotate the right side
   geom_curve(
-    x = 3000000, y = 2300, xend = 2000000, yend = 1500,
+    x = 3000000, y = 2300, xend = 2500000, yend = 1500,
     arrow = arrow(length = unit(0.3, "cm")),
     curvature = 0.3,
     color='grey40'
