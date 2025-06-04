@@ -1,0 +1,80 @@
+---
+title: "Drury Lane Development"
+format:
+  html:
+    embed-resources: true
+    link-external-newwindow: true
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r setup}
+library(tidyverse)
+library(leaflet)
+library(sf)
+
+source(here::here('Drury Lane Development/Property_helpers.R'))
+```
+
+```{r noho}
+# Parcels and assessed value from 2025, from Northampton GIS
+path = here::here('Shapefiles/M214_20250515.gdb.zip')
+lots_layer = 'M214TaxPar'
+assess_layer = 'M214Assess'
+url_format = '<a href="https://northamptonma.s3.amazonaws.com/recordcardsfy25/{ids}.PDF" target="_blank">{ids}</a>'
+lut_layer = 'M214UC_LUT'
+
+lots_noho = read_city_data(
+  path, lots_layer, assess_layer, lut_layer, url_format)
+```
+
+```{r easthampton}
+path = here::here('Shapefiles/M087_parcels_gdb Easthampton FY25.zip')
+# st_layers(path)
+lots_layer = 'M087TaxPar'
+assess_layer = 'M087Assess'
+url_format = ''
+lut_layer = 'M087UC_LUT'
+
+# Not working yet; Easthampton shapes are MULTISURFACE with nested
+# CURVEPOLYGON, COMPOUNDCURVE and CIRCULARSTRING components
+# lots_east = read_city_data(
+#   path, lots_layer, assess_layer, lut_layer, url_format)
+```
+
+```{r southampton}
+path = here::here('Shapefiles/M276_parcels_gdb Southampton FY25.zip')
+# st_layers(path)
+lots_layer = 'M276TaxPar'
+assess_layer = 'M276Assess'
+url_format = ''
+lut_layer = 'M276UC_LUT'
+
+lots_south = read_city_data(
+  path, lots_layer, assess_layer, lut_layer, url_format)
+```
+
+```{r map}
+(map = leaflet(width='95%', height='800px') |> 
+  addPolygons(data=lots_noho,
+              stroke=TRUE, color='black', weight=0.5, opacity=0.5,
+              fillColor='grey90', fillOpacity = 0.05,
+              label=~labels, popup=~popups) |> 
+  addPolygons(data=lots_east,
+              stroke=TRUE, color='black', weight=0.5, opacity=0.5,
+              fillColor='grey90', fillOpacity = 0.05,
+              label=~labels, popup=~popups) |> 
+  addProviderTiles('Stadia.StamenTonerLite', group='Street') |> 
+  addProviderTiles('Esri.WorldImagery', group='Satellite') |>  
+  # addLegend(pal=pal, values=~Value_per_acre, 
+  #           title='Value per acre',
+  #           labFormat=label_format) |> 
+  addLayersControl(baseGroups=c('Street', 'Satellite'),
+    # overlayGroups=c('Value per acre'),
+    options=layersControlOptions(collapsed=FALSE))
+)
+
+```
+
