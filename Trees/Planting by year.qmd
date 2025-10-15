@@ -11,6 +11,7 @@ editor: visual
 ```{r}
 # Tree planting by year
 library(leaflet)
+library(leaflet.extras)
 
 # Planting data
 source(here::here('Trees/Read_and_clean_planting.R'))
@@ -35,6 +36,10 @@ map_data = planted |>
 map_data = 
   inner_join(map_data, planting_locations) |> 
   st_as_sf()
+
+# Save for QGIS
+
+# sf::write_sf(map_data |> select(-label), 'Trees/Planting_by_year.gpkg', 'map_data')
 
 # Add data for a single year to the map
 add_year = function(year, color) {
@@ -63,7 +68,10 @@ pwalk(list(color=colors, year=years), add_year)
 map |> 
   addLayersControl(baseGroups=c('Street', 'Satellite'),
     overlayGroups=as.character(years),
-    options=layersControlOptions(collapsed=FALSE))
+    options=layersControlOptions(collapsed=FALSE)) |> 
+  addLegend(position='bottomright', colors=colors, labels=years) |> 
+  addControlGPS(options=gpsOptions(setView=TRUE, maxZoom=19, autoCenter=TRUE)) |> 
+                  addFullscreenControl()
 
 ```
 
