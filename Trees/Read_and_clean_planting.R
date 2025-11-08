@@ -142,3 +142,53 @@ map_data =
 
 # Helpers
 int_pct = function(val) scales::percent(val, accuracy=1)
+
+# Arrange multiple points per location in a circle
+circle_points <- function(df, base_radius = 0.0001) {
+  coords <- st_coordinates(df)
+  
+  # Identify and count duplicate locations
+  df <- df  |> 
+    mutate(
+      coord_id = paste(coords[,1], coords[,2]),
+     ) |> 
+    # Group by location and assign positions
+    group_by(coord_id) %>%
+    mutate(
+      n = n(),
+      position_in_group = row_number() - 1  # 0-indexed
+    ) %>%
+    ungroup()
+  
+  # Calculate new coordinates for duplicates
+  df <- df %>%
+    mutate(
+      # Increase radius for locations with more points
+      radius = if_else(n > 1, 
+                      base_radius * (n / 5),
+                      0),
+      # Equal spacing around circle
+      angle = if_else(n > 1,
+                     (2 * pi * position_in_group) / n,
+                     0),
+      # Calculate offsets
+      offset_x = radius * cos(angle),
+      offset_y = radius * sin(angle)
+    )
+  
+  # Apply offsets to geometry
+  new_coords <- coords
+  new_coords[,1] <- new_coords[,1] + df$offset_x
+  new_coords[,2] <- new_coords[,2] + df$offset_y
+  
+  # Create new geometry
+  df %>%
+    st_set_geometry(
+      st_sfc(lapply(1:nrow(new_coords), function(i) {
+        st_point(new_coords[i, 1:2])
+      }), crs = st_crs(df))
+    ) %>%
+    select(-coord_id, -n, -position_in_group, 
+           -radius, -angle, -offset_x, -offset_y)
+}
+

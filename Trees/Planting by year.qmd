@@ -35,7 +35,9 @@ map_data = planted |>
 
 map_data = 
   inner_join(map_data, planting_locations) |> 
-  st_as_sf()
+  st_as_sf() |> 
+  # Some locations have multiple trees. We don't want to overplot them...
+  circle_points()
 
 # Save for QGIS
 
