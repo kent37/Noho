@@ -1,5 +1,5 @@
 ---
-title: "Northampton tree planting 2015-2023"
+title: "Northampton tree planting 2015-2024"
 format: 
   dashboard:
     embed-resources: true
@@ -23,13 +23,12 @@ map_data = planted |>
   summarize(count=n(),
             name_label=summarize_names(`Common Name`),
             Location=str_c(sort(unique(Location)), collapse=','),
-            plant_dates = plant_dates(list(unique(`Date Planted`))),
             .groups='drop'
   ) |> 
   mutate(address=str_to_title(if_else(is.na(Num), 
                                       Street, paste(Num, Street))),
          label=paste0(address, ' (', tree_count(count), ')<br>',
-                      plant_dates, '<br><br>', 
+                      Year, '<br><br>', 
                       name_label) |> 
            lapply(htmltools::HTML) |> unname())
 
@@ -54,8 +53,10 @@ add_year = function(year, color) {
 
 # Not many choices of palette for 9+ categories
 #colors = RColorBrewer::brewer.pal(n_distinct(map_data$Year), 'Paired')
-colors = pals::trubetskoy(9)
-years = do.call(seq, range(map_data$Year) |> as.list())
+colors = c('black', 'brown', 
+           pals::trubetskoy(10)[c(6, 4, 2, 5, 7, 8:10)])
+years = do.call(seq, range(map_data$Year) |> as.list()) |> 
+  rev()
 
 # Base map
 map = leaflet() |> 
@@ -71,7 +72,7 @@ map |>
   addLayersControl(baseGroups=c('Street', 'Satellite'),
     overlayGroups=as.character(years),
     options=layersControlOptions(collapsed=FALSE)) |> 
-  addLegend(position='bottomright', colors=colors, labels=years) |> 
+  addLegend(position='bottomright', colors=colors, labels=years, opacity=1) |> 
   addControlGPS(options=gpsOptions(setView=TRUE, maxZoom=19, autoCenter=TRUE)) |> 
                   addFullscreenControl()
 
@@ -79,6 +80,6 @@ map |>
 
 # About
 
-This map shows surviving tree plantings for the City of Northampton in the years 2015 to 2023.
+This map shows surviving tree plantings for the City of Northampton in the years 2015 to 2024.
 
 Tree planting data from the City Tree Warden. Map by Kent S Johnson.
