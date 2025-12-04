@@ -121,6 +121,11 @@ plant_dates = function(dates) {
     paste0(min(dates), '-', max(dates))
 }
 
+# Insert 2024 data
+source(here::here('Trees/Read_and_clean_planting_2024.R'))
+
+planted = planted |> bind_rows(planted_2024)
+
 map_data = planted |> 
   filter(!dead) |> 
   group_by(Num, Street, Ward) |> 
@@ -135,6 +140,12 @@ map_data = planted |>
                       plant_dates, '<br><br>', 
                       name_label) |> 
            lapply(htmltools::HTML) |> unname())
+
+
+# Check for missing locations
+missing_locations = map_data |> 
+  anti_join(planting_locations)
+stopifnot(nrow(missing_locations)==0)
 
 map_data = 
   inner_join(map_data, planting_locations) |> 
