@@ -1,0 +1,60 @@
+The plan:
+- check for latest ward files - No, did not have the latest
+- there are duplicates in the massgis data !!
+  - Removing the EDIT_DATE field before selecting distinct elements fixes this
+- correct wards in source documents
+  - locate duplicate addresses and figure out which is correct
+  - some of these may be simple errors...but then how did they end up in planting_locations?? or maybe the wards changed twice?
+  - procedure:
+    - look up in massgis_ward to find the correct ward
+    - find the original in planted_raw or planted_raw_2023
+    - correct the original in google sheets
+    - Keep notes!
+63 Vernon St
+  - ward 5
+  - appears twice in planted_raw as ward 2, once as ward 5, all in 2017!
+93 Main St
+  - This is in Florence ward 5
+  - in planted_raw as both 3 (Hamp) and 5 (Subway Florence)
+  - the ward 5 entry is correct? Miss Flo's?
+  - there doesn't seem to be a 93 Main downtown
+99 Main St
+  - can be ward 4 or 5
+  - the ward 3 entry should be ward 4 - this is the courthouse
+100 North Maple
+  - ward 7
+  - planted_raw has 5 and 7
+134 South St
+  - ward 4
+  - planted_raw has 4 and 7
+211 North Elm
+  - ward 1
+  - planted_raw has 1 and 5
+265 Prospect St
+  - ward 1
+  - planted_raw has 1 and 2
+North Main St (Look Park and roundabout)
+  - ward 7
+  - planted_raw has 5 and 7
+  
+- delete dups from planting_locations
+dup_addresses = all_matched |> 
+  st_drop_geometry() |> 
+  count(Street_Addr) |> 
+  filter(n>1) |> 
+  pull(Street_Addr)
+dup_locations = all_matched |> filter(Street_Addr %in% dup_addresses)
+
+# The bad addresses in dup_locations:
+bad_locations = dup_locations[c(4, 8, 9, 11, 13, 14, 15),]
+
+all_matched_new = all_matched |> anti_join(st_drop_geometry(bad_locations))
+# 845 observations
+
+# 99 main ward 3 needs to be changed to ward 5
+all_matched_new[758, 'Ward'] = '5'
+
+st_write(all_matched_new, 
+         here::here('Shapefiles/Tree_locations.gpkg'), delete_layer=TRUE)
+
+- check that all addresses are planting_locations - yes!

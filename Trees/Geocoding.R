@@ -6,11 +6,18 @@ library(sf)
 # that uses ward to resolve duplicate street names
 massgis = read_sf(here::here('Shapefiles/AddressPts_M214/AddressPts_M214.shp')) |> 
   select(-(ADDR_PT_ID:NAD_ID), -REL_LOC, -(WING:SUBSITE),
-         -NEIGHBORHD, -(STATE:PRE_TYPE), -(POST_DIR:ADDRTWN_ID)) |> 
+         -NEIGHBORHD, -(STATE:PRE_TYPE), -(POST_DIR:ADDRTWN_ID),
+         -EDIT_DATE) |> 
+  filter(TOWN=='NORTHAMPTON') |>
   distinct()
 
-wards = read_sf(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_ward_precinct_2010_20190916.shp')) |> 
-  mutate(ward=str_sub(WARD, 1, 1)) |> 
+# old_wards = read_sf(here::here('Shapefiles/vote_ward_precinct_2010_20190916/vote_ward_precinct_2010_20190916.shp')) |> 
+#   mutate(ward=str_sub(WARD, 1, 1)) |> 
+#   group_by(ward) |> 
+#   summarize()
+
+wards = read_sf(here::here('Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
+  mutate(ward=str_sub(WardPrec, 1, 1)) |> 
   group_by(ward) |> 
   summarize()
 
