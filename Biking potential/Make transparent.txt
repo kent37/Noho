@@ -1,0 +1,59 @@
+Creating a Transparent Bike Routes Image from "Northampton bike routes.png"
+================================================================================
+
+GOAL: Extract red bike routes from a satellite image and create a TIFF with
+transparent background, preserving anti-aliasing and making routes suitable
+as an overlay on other maps.
+
+INITIAL STEPS:
+1. Created TIFF copy of the PNG file:
+   magick "Northampton bike routes.png" "Northampton bike routes.tif"
+
+APPROACH:
+The challenge was to isolate red bike routes while:
+- Preserving smooth anti-aliased edges
+- Removing grey-green streets and reddish-brown fields from background
+- Making routes opaque and saturated enough to stand out as overlay
+- Avoiding pixelation
+
+FINAL WORKING COMMAND:
+magick "Northampton bike routes.tif" \
+  \( +clone -colorspace RGB \
+     \( -clone 0 -separate -delete 1,2 \) \
+     \( -clone 0 -separate -delete 0,2 \) \
+     \( -clone 0 -separate -delete 0,1 \) \
+     -delete 0 \
+     \( -clone 1 -clone 2 -evaluate-sequence max \) \
+     -delete 1,2 \
+     -compose minus -composite \
+     -level 35%,65% \
+     -gamma 1.5 \
+  \) \
+  -alpha off -compose copy-opacity -composite \
+  "Northampton bike routes transparent.tif"
+
+HOW IT WORKS:
+1. Separates RGB channels
+2. Computes: Red - max(Green, Blue) to identify where red dominates
+3. Applies level adjustment (35%,65%):
+   - 35% cutoff removes grey-green streets and reddish-brown fields
+   - 65% upper limit boosts opacity/saturation of routes
+4. Applies gamma 1.5 to preserve smooth anti-aliased edges
+5. Uses result as alpha channel (transparency mask)
+
+KEY PARAMETERS:
+- level 35%: Lower cutoff removes background with weak red dominance
+- level 65%: Upper limit increases route opacity/saturation
+- gamma 1.5: Preserves anti-aliasing (values >1 brighten mid-tones smoothly)
+
+ITERATION NOTES:
+- Hard thresholds removed anti-aliasing (made routes pixelated)
+- Auto-level brought in too much background
+- Gamma <1 (e.g., 0.5) made everything too transparent
+- Multiplying RGB channels darkened routes (added black) rather than saturating
+- Dilation widened routes but created grey pixels and brought back roads
+- Final balance: 35%,65% level with gamma 1.5
+
+RESULT:
+"Northampton bike routes transparent.tif" - Red bike routes on transparent
+background, smooth anti-aliased edges, suitable for overlay on other maps.
