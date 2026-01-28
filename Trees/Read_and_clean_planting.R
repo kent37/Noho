@@ -107,6 +107,15 @@ summarize_names = function(common_names) {
     paste(collapse='<br>')
 }
 
+munge_location = function(location) {
+  case_when(
+    #location == "TREE BELT" ~ "TB",
+    str_detect(location, "SET BACK") ~ "Setback",
+    location == "RIGHT OF WAY" ~ "RoW",
+    .default = str_to_title(location)
+  )
+}
+
 # Summarize planting by location
 tree_count = function(count) {
   if_else(count==1, '1 tree', paste(count, 'trees'))

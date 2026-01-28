@@ -22,14 +22,15 @@ map_data = planted |>
   group_by(Num, Street, Ward, Year) |> 
   summarize(count=n(),
             name_label=summarize_names(`Common Name`),
-            Location=str_c(sort(unique(Location)), collapse=','),
+            Location=str_c(sort(unique(munge_location(Location))), collapse=', '),
             .groups='drop'
   ) |> 
   mutate(address=str_to_title(if_else(is.na(Num), 
                                       Street, paste(Num, Street))),
          label=paste0(address, ' (', tree_count(count), ')<br>',
                       Year, '<br><br>', 
-                      name_label) |> 
+                      name_label, '<br>',
+                      Location) |> 
            lapply(htmltools::HTML) |> unname())
 
 map_data = 

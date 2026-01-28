@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__r-btw__btw_tool_env_describe_data_frame",
+      "mcp__r-btw__btw_tool_env_describe_environment",
+      "mcp__r-btw__list_r_sessions"
+    ]
+  }
+}

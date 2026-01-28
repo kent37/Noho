@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__r-btw__btw_tool_env_describe_environment"
+    ]
+  }
+}
