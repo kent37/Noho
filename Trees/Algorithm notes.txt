@@ -1,0 +1,17 @@
+Algorithm notes
+
+Algorithm 1: Voronoi (Nearest-Person Assignment)
+Highly unbalanced - North Farms gets no trees, Howes St gets 59
+
+Algorithm 2: Capacitated Nearest-Neighbor (Greedy Balanced)
+This yields a mishmash of assignments, could be OK with some tweaking
+
+Algorithm 3: Optimal Transport (Linear Programming)
+Not sure this is working yet, it assigned 86 trees to Howes St
+
+Algorithm 4: Voronoi with Rebalancing
+This works pretty well. It might need a little tweaking
+
+Algorithm 5: Weighted Voronoi (Iterative Power Diagram)
+Some odd results - only 2 trees to Stoddard St, Olander Dr trees overtake
+the Jewett St house
