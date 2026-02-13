@@ -6,6 +6,10 @@ library(leaflet)
 library(leaflet.extras)
 library(sf)
 
+make_address = function(num, street) {
+  if_else(is.na(num), street, glue::glue('{num} {street}'))
+}
+
 # Trees for 2023 and newer
 trees = read_sf(here::here('Trees/Planting_by_year.gpkg'), 'map_data') |> 
   st_transform(26986) |> # Use MA Mainland CRS for consistent geometry
@@ -13,8 +17,21 @@ trees = read_sf(here::here('Trees/Planting_by_year.gpkg'), 'map_data') |>
   mutate(Street = str_to_title(Street),
          Addr = make_address(Num, Street))
 
+# Write a GeoJSON file for import into geojson.io
+# Use the colors from Planting by year
+# year_colors = tribble(
+#   ~Year, ~`marker-color`,
+#   2023, '#000000',
+#   2024, '#a52a2a'
+# )
+# st_write(trees |> left_join(year_colors) |> select(`marker-color`) |> st_transform(4326),
+#          here::here('Trees/RecentTrees.geojson'),
+#         delete_dsn=TRUE, driver = "GeoJSON", 
+#              layer_options = "RFC7946=YES")
+
 # Read people and summarize to one row per address
-people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv')) |> 
+people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
+                  comment='#') |> 
   filter(!is.na(geometry)) |> 
   mutate(
     # Replace NBSP with regular space
@@ -60,7 +77,8 @@ summarize_assignments = function(assigned, people, title=NULL) {
       columns = total_miles,
       fns = list(Total ~ sum(.)),
       fmt = ~fmt_number(., decimals=1)
-    )
+    ) |> 
+    tab_options(table.font.size='80%', data_row.padding='4px')
 }
 
 # Summarize counts per person
@@ -97,10 +115,6 @@ summarize_distances = function(assigned, people) {
     arrange(person_id)
 }
 
-make_address = function(num, street) {
-  if_else(is.na(num), street, glue::glue('{num} {street}'))
-}
-
 # Display tree assignments on an interactive map
 #
 # Creates a leaflet visualization with trees colored by assigned person_id.
@@ -127,7 +141,7 @@ show_assignments = function(assigned, people) {
       count.tree = replace_na(count.tree, 0),
       label = glue::glue('{Addr} ({count.tree} trees)'))
   
-  leaflet() |> 
+  leaflet(width='100%', height='60vh') |> 
     setView(-72.667, 42.330, 13) |> 
     addProviderTiles('CartoDB.Voyager', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
@@ -525,23 +539,23 @@ assign_weighted_voronoi = function(trees, people, max_iter = 50, tolerance = 0.0
 }
 
 trees_voronoi = segment_voronoi(trees, people)
-summarize_assignments(trees_voronoi, people, 'Voronoi (Nearest person)')
-show_assignments(trees_voronoi, people)
+# summarize_assignments(trees_voronoi, people, 'Voronoi (Nearest person)')
+# show_assignments(trees_voronoi, people)
 
 trees_nearest = assign_capacitated_nearest(trees, people)
-summarize_assignments(trees_nearest, people, 'Balanced nearest neighbor')
-show_assignments(trees_nearest, people)
+# summarize_assignments(trees_nearest, people, 'Balanced nearest neighbor')
+# show_assignments(trees_nearest, people)
 
 trees_optimal = assign_optimal_transport(trees, people)
-summarize_assignments(trees_optimal, people, 'Minimum total distance')
-show_assignments(trees_optimal, people)
+# summarize_assignments(trees_optimal, people, 'Minimum total distance')
+# show_assignments(trees_optimal, people)
 
 trees_voronoi_balanced = 
   assign_voronoi_rebalanced(trees, people)
-summarize_assignments(trees_voronoi_balanced, people, 
-                      'Voronoi with Rebalancing')
-show_assignments(trees_voronoi_balanced, people)
+# summarize_assignments(trees_voronoi_balanced, people, 
+#                       'Voronoi with Rebalancing')
+# show_assignments(trees_voronoi_balanced, people)
 
 trees_voronoi_weighted = assign_weighted_voronoi(trees, people)
-summarize_assignments(trees_voronoi_weighted, people, 'Weighted Voronoi')
-show_assignments(trees_voronoi_weighted, people)
+# summarize_assignments(trees_voronoi_weighted, people, 'Weighted Voronoi')
+# show_assignments(trees_voronoi_weighted, people)

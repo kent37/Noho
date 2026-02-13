@@ -1,0 +1,82 @@
+---
+title: "Tree Maintenance Assignments"
+format:
+  html:
+    embed-resources: true
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+source(here::here('Trees/AssignPeopleToTrees.R'))
+```
+
+::: {.panel-tabset}
+
+## Nearest Person
+
+Each tree is assigned to the closest volunteer. This is the simplest approach
+and keeps travel distances short, but some volunteers may end up with many more
+trees than others.
+
+```{r}
+#| label: voronoi
+summarize_assignments(trees_voronoi, people, 'Nearest Person')
+show_assignments(trees_voronoi, people)
+```
+
+## Balanced Nearest
+
+Trees are assigned to the closest volunteer who still has room. Volunteers near
+more trees fill up first, then nearby trees go to the next-closest volunteer.
+This spreads the workload more evenly while still keeping assignments fairly
+close to each volunteer.
+
+```{r}
+#| label: nearest
+summarize_assignments(trees_nearest, people, 'Balanced Nearest')
+show_assignments(trees_nearest, people)
+```
+
+## Minimum Distance
+
+Assignments are chosen to minimize the total travel distance across all
+volunteers while keeping everyone's workload roughly equal. This finds the
+best overall balance between short trips and fair distribution.
+
+```{r}
+#| label: optimal
+summarize_assignments(trees_optimal, people, 'Minimum Distance')
+show_assignments(trees_optimal, people)
+```
+
+## Rebalanced
+
+Starts with the nearest-person assignment, then moves trees between neighboring
+volunteers to even out the workload. Only trees near the boundary between two
+volunteers are moved, so the assignments stay geographically sensible.
+
+```{r}
+#| label: rebalanced
+summarize_assignments(trees_voronoi_balanced, people, 'Rebalanced')
+show_assignments(trees_voronoi_balanced, people)
+```
+
+## Weighted Zones
+
+Adjusts the size of each volunteer's territory until everyone has roughly the
+same number of trees. Volunteers with too few trees get a larger zone;
+volunteers with too many get a smaller one. This keeps each person's trees in
+a single contiguous area.
+
+```{r}
+#| label: weighted
+summarize_assignments(trees_voronoi_weighted, people, 'Weighted Zones')
+show_assignments(trees_voronoi_weighted, people)
+```
+
+:::
