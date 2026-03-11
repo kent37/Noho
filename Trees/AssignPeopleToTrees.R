@@ -38,12 +38,11 @@ people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
     geometry = str_replace_all(geometry, "\u00a0", " ")
     ) |>
   summarize(count=n(), .by=c(Num, Street, geometry)) |> 
-  mutate(person_id = row_number(), Addr = make_address(Num, Street)) |> 
-  st_as_sf(wkt='geometry', crs=26986)
-
-# Assign colors to addresses here for consistency
-# This the Paul Tol rainbow palette
-people$color = khroma::color('discrete rainbow')(nrow(people))
+  mutate(person_id = row_number(), Addr = make_address(Num, Street)) |>
+  st_as_sf(wkt='geometry', crs=26986) |>
+  # Assign colors to addresses here for consistency
+  # This the Paul Tol rainbow palette
+  mutate(color = khroma::color('discrete rainbow')(n()))
 
 noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg')) |> 
   st_geometry()
@@ -57,11 +56,11 @@ noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg')) |>
 summarize_assignments = function(assigned, people, title=NULL) {
   if (is.null(title)) title = deparse(substitute(assigned))
   
-  stats = summarize_counts(assigned) |> 
-    left_join(summarize_distances(assigned, people))
+  stats = summarize_counts(assigned) |>
+    left_join(summarize_distances(assigned, people), join_by(person_id))
   
-  data = people |> st_drop_geometry() |> select(person_id, Addr) |> 
-    left_join(stats) |> 
+  data = people |> st_drop_geometry() |> select(person_id, Addr) |>
+    left_join(stats, join_by(person_id)) |>
     replace_na(list(count=0, total_miles=0))
   
   data |> 
@@ -123,8 +122,8 @@ summarize_distances = function(assigned, people) {
 # @param people sf object with people locations
 # @return leaflet object
 show_assignments = function(assigned, people) {
-  map_data = left_join(assigned, st_drop_geometry(people), 
-                       by='person_id', suffix=c('.tree', '')) |> 
+  map_data = left_join(assigned, st_drop_geometry(people),
+                       join_by(person_id), suffix=c('.tree', '')) |>
     st_transform(4326) |> 
     mutate(label=glue::glue('{Addr.tree} - {count.tree} trees<br>(by {Addr})') |> 
              lapply(htmltools::HTML) |> unname())
@@ -136,7 +135,7 @@ show_assignments = function(assigned, people) {
     st_set_geometry('hull')
   
   people_data = people |> 
-    left_join(summarize_counts(assigned), by='person_id', suffix=c('', '.tree')) |> 
+    left_join(summarize_counts(assigned), join_by(person_id), suffix=c('', '.tree')) |>
     mutate(
       count.tree = replace_na(count.tree, 0),
       label = glue::glue('{Addr} ({count.tree} trees)'))
@@ -373,7 +372,7 @@ assign_voronoi_rebalanced = function(trees, people, max_iter = 10,
         status = case_when(
           diff > capacity * tolerance ~ "over",
           diff < -capacity * tolerance ~ "under",
-          TRUE ~ "balanced"
+          .default = "balanced"
         )
       )
 
@@ -445,7 +444,7 @@ assign_voronoi_rebalanced = function(trees, people, max_iter = 10,
             status = case_when(
               diff > capacity * tolerance ~ "over",
               diff < -capacity * tolerance ~ "under",
-              TRUE ~ "balanced"
+              .default = "balanced"
             )
           )
 
