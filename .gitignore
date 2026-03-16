@@ -8,3 +8,4 @@ DEM
 *.gpkg-shm
 *.gpkg-wal
 Biking_Potential_Layer*
+Impervious surface
