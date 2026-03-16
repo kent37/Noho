@@ -36,6 +36,7 @@ gg1 = ggplot() +
 
 pie_bar = c(-72.6674863,42.3349417)
 the_roost = c(-72.62826, 42.320975)
+familiars = c(-72.628442, 42.319953)
 aldrich_st = c(-72.6380252,42.3240853)
 
 # Florence Pie Bar
@@ -90,6 +91,17 @@ leaflet() %>%
   addPolygons(data=st_geometry(aldrich_walk_mi), weight=1, group='walk',
               color='green', fillColor='green', fillOpacity=0.1)
 
+
+# Familiars by time
+familiars_walk = ors_isochrones(familiars, range = 40*60, interval = 10*60, 
+                      profile=ors_profile('walking'), output = "sf")
+
+leaflet( ) %>% 
+ addProviderTiles('Stadia.StamenTonerLite') %>% 
+  addPolygons(data=st_geometry(familiars_walk), weight=1, group='walk',
+              color='green', fillColor='green', fillOpacity=0.1) %>% 
+  addLayersControl(overlayGroups = c('walk'),
+                   options=layersControlOptions(collapsed=FALSE))
 
 # Query OSM based on https://overpass-turbo.eu/
 # (
