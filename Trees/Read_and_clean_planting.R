@@ -27,16 +27,24 @@ planted_raw_2023 = read_sheet(
   ), Street)) |> 
   select(-`Tree Diaper`, -starts_with('Watering Date'))
 
+planted_raw_2025 = readxl::read_xlsx(
+  here::here('Trees/Kent\'s Copy of 2025 Trees Planted-corrected.xlsx'),
+  sheet=1,
+  range=cell_cols("A:S")
+) |> 
+  select(-`Tree Diaper`) |> 
+  mutate(across(where(~!is.character(.x)), ~as.character(.x))) |> 
+  mutate(`Date Planted` = replace_na(`Date Planted`, '2025'))
+
 planted = planted_raw |> 
-  bind_rows(planted_raw_2023) |> 
+  bind_rows(planted_raw_2023, planted_raw_2025) |> 
   rename(Num=`#`) |> 
   mutate(Num=parse_number(Num),
          Year = year(mdy(`Date Planted`, quiet=TRUE)),
          Year = if_else(is.na(Year), parse_number(`Date Planted`), Year),
          dead = is.na(Species),
-         Genus = case_match(Genus, # Fix misspellings
-                             'Liquidamber' ~ 'Liquidambar',
-                             .default = Genus,
+         Genus = replace_values(Genus, # Fix misspellings
+                             'Liquidamber' ~ 'Liquidambar'
                              ))
 
 # Clean up some scientific names
@@ -72,13 +80,13 @@ planted = local({
   
   # Fix some different spellings
   dead = dead |> 
-    mutate(`Common Name` = case_match(`Common Name`,
+    mutate(`Common Name` = replace_values(`Common Name`,
       "GINKGO BILOBA" ~ "GINKGO",
       "LONDON PLANE \"EXCLAMATION\"" ~ "EXCLAMATION LONDONPLANE",
       "LONDON PLANE TREE 'BLOODGOOD'" ~ "LONDON PLANE \"BLOODGOOD\"",
       "PRINCETON GINKGO" ~ "GINKGO \"PRINCETON SENTRY\"",
       "STREET KEEPER HONEY LOCUST" ~ "HONEY LOCUST \"STREET KEEPER\"",
-      .default=`Common Name`
+      "SWAMP WHITE OAK 'AMERICAN DREAM'" ~ "SWAMP WHITE OAK"
     ))
   
   # Check
@@ -130,7 +138,7 @@ plant_dates = function(dates) {
     paste0(min(dates), '-', max(dates))
 }
 
-# Insert 2024 data
+# Insert 2024 data, it needs special handling
 source(here::here('Trees/Read_and_clean_planting_2024.R'))
 
 planted = planted |> bind_rows(planted_2024)
