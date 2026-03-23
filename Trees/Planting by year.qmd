@@ -1,5 +1,5 @@
 ---
-title: "Northampton tree planting 2015-2024"
+title: "Northampton tree planting 2015-2025"
 format: 
   dashboard:
     embed-resources: true
@@ -16,7 +16,7 @@ library(leaflet.extras)
 # Planting data
 source(here::here('Trees/Read_and_clean_planting.R'))
 
-# Based on Read_and_clear_plantings but separated by year
+# Based on Read_and_clean_plantings but separated by year
 map_data = planted |> 
   filter(!dead) |> 
   group_by(Num, Street, Ward, Year) |> 
@@ -55,7 +55,7 @@ add_year = function(year, color) {
 # Not many choices of palette for 9+ categories
 #colors = RColorBrewer::brewer.pal(n_distinct(map_data$Year), 'Paired')
 colors = c('black', 'brown', 
-           pals::trubetskoy(10)[c(6, 4, 2, 5, 7, 8:10)])
+           pals::trubetskoy(10)[c(6, 4, 2, 5, 3, 7, 8:10)])
 years = do.call(seq, range(map_data$Year) |> as.list()) |> 
   rev()
 
@@ -81,6 +81,6 @@ map |>
 
 # About
 
-This map shows surviving tree plantings for the City of Northampton in the years 2015 to 2024.
+This map shows surviving tree plantings for the City of Northampton in the years 2015 to 2025.
 
 Tree planting data from the City Tree Warden. Map by Kent S Johnson.
