@@ -1,4 +1,4 @@
-﻿First,Last,Num,Street,geometry
+First,Last,Num,Street,geometry
 Rich,Parrish,138,South St,POINT (106577.2 896381.6)
 Kent,Johnson,1,Aldrich St,POINT (106380.7 897694)
 Sue,Lofthouse,15,Stoddard St,POINT (106245.3 898039.4)
@@ -15,3 +15,4 @@ Craig,Machado,117,Olander Dr,POINT (105544.1 896773)
 Tom,Bassett,40,Howes St,POINT (103572.7 899839.6)
 Andrew,Mackey,76,Pine St,POINT (103561.3 898610.7)
 Jonathan,Kurtis,569,North Farms Rd,POINT (103744.4 902988.4)
+Bob,Haxby,74,Village Hill Rd,POINT (105331.8 896526.7)

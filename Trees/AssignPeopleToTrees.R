@@ -38,6 +38,7 @@ people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
     geometry = str_replace_all(geometry, "\u00a0", " ")
     ) |>
   summarize(count=n(), .by=c(Num, Street, geometry)) |> 
+  arrange(Street) |> 
   mutate(person_id = row_number(), Addr = make_address(Num, Street)) |>
   st_as_sf(wkt='geometry', crs=26986) |>
   # Assign colors to addresses here for consistency
@@ -47,37 +48,142 @@ people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
 noho = read_sf(here::here('Shapefiles/Noho_outline/Noho_outline.gpkg')) |> 
   st_geometry()
 
+# Compute assignment quality metrics
+#
+# @param assigned sf object with tree assignments (must have 'person_id' and 'count' columns)
+# @param people sf object with people locations
+# @return named list: cv, total_miles, max_single_tree_miles
+compute_metrics = function(assigned, people) {
+  # Normalize tree counts by number of people at each location so that
+  # locations with more people are not penalized for having more trees
+  counts = tibble(person_id = seq_len(nrow(people)), n_people = people$count) |>
+    left_join(
+      assigned |> st_drop_geometry() |> summarize(count = sum(count), .by = person_id),
+      join_by(person_id)
+    ) |>
+    replace_na(list(count = 0)) |>
+    mutate(trees_per_person = count / n_people) |>
+    pull(trees_per_person)
+
+  cv = sd(counts) / mean(counts)
+
+  # x = sort(counts)
+  # n = length(x)
+  # gini = sum((2 * seq_len(n) - n - 1) * x) / (n * sum(x))
+
+  dists_m = assigned |>
+    rowwise() |>
+    mutate(distance_m = as.numeric(st_distance(geom, people$geometry[person_id]))) |>
+    ungroup() |>
+    pull(distance_m)
+
+  total_miles           = sum(dists_m) * 0.000621371
+  max_single_tree_miles = max(dists_m) * 0.000621371
+
+  # Total convex hull perimeter across all volunteers (trees + person location)
+  hull_perimeter_miles = map_dbl(seq_len(nrow(people)), \(pid) {
+    tree_geoms  = st_geometry(assigned)[assigned$person_id == pid]
+    person_geom = st_geometry(people)[pid]
+    hull = st_union(c(tree_geoms, person_geom)) |> st_convex_hull()
+    tryCatch(as.numeric(st_perimeter(hull)), error = \(e) 0)
+  }) |> sum() * 0.000621371
+
+  # Normalized composite score (lower is better).
+  # Distances are normalized by Voronoi baselines stored in voronoi_total_miles
+  # and voronoi_max_miles, which are set after trees_voronoi is computed.
+  score = tryCatch(
+    cv + total_miles / voronoi_total_miles + 
+      max_single_tree_miles / voronoi_max_miles +
+      hull_perimeter_miles / voronoi_hull_perimeter,
+    error = \(e) NA_real_
+  )
+
+  list(
+    cv                    = cv,
+#    gini                  = gini,
+    total_miles           = total_miles,
+    max_single_tree_miles = max_single_tree_miles,
+    hull_perimeter_miles  = hull_perimeter_miles,
+    score                 = score
+  )
+}
+
 # Summarize tree assignments by person
 #
 # Computes the total number of trees assigned to each person location.
 #
 # @param assigned sf object with tree assignments (must have 'person_id' and 'count' columns)
-# @return tibble with person_id and total tree count, sorted descending by count
+# @return gt table with per-person counts and distances, plus assignment quality metrics
 summarize_assignments = function(assigned, people, title=NULL) {
   if (is.null(title)) title = deparse(substitute(assigned))
-  
+
   stats = summarize_counts(assigned) |>
     left_join(summarize_distances(assigned, people), join_by(person_id))
-  
+
   data = people |> st_drop_geometry() |> select(person_id, Addr) |>
     left_join(stats, join_by(person_id)) |>
     replace_na(list(count=0, total_miles=0))
-  
-  data |> 
-    select(-person_id) |> 
-    gt() |> 
-    tab_header(title=title) |> 
-    cols_align('left', columns='Addr') |> 
-    cols_label(Addr='Address', 
-               count=html('Number<br>of trees'), 
-               total_miles=html('Total<br>miles')) |> 
-    fmt_number(total_miles, decimals=1) |> 
+
+  metrics = compute_metrics(assigned, people)
+
+  data |>
+#    select(-person_id) |>
+    gt(rowname_col='person_id') |>
+    tab_header(title=title,
+               subtitle=glue::glue(
+      'CV: {round(metrics$cv, 2)}  |  ',
+      'Max tree distance: {round(metrics$max_single_tree_miles, 1)} mi  |  ',
+      'Score: {round(metrics$score, 2)}'
+    )) |>
+    cols_align('left', columns='Addr') |>
+    cols_label(Addr='Address',
+               count=html('Number<br>of trees'),
+               total_miles=html('Total<br>miles')) |>
+    fmt_number(total_miles, decimals=1) |>
     grand_summary_rows(
       columns = total_miles,
       fns = list(Total ~ sum(.)),
       fmt = ~fmt_number(., decimals=1)
-    ) |> 
-    tab_options(table.font.size='80%', data_row.padding='4px')
+    ) |>
+    tab_options(table.font.size='70%', data_row.padding='4px') |>
+    opt_css('div.gt_container { padding-top: 0 !important; padding-bottom: 0 !important; }')
+}
+
+# Compare assignment algorithms using rank aggregation
+#
+# Computes metrics for each algorithm and ranks them on CV, total distance,
+# and max single-tree distance. Lower rank sum = better overall assignment.
+#
+# @param assignments named list of sf objects with tree assignments
+# @param people sf object with people locations
+# @return gt table sorted by rank sum
+compare_assignments = function(assignments, people) {
+  map(assignments, \(a) as_tibble(compute_metrics(a, people))) |>
+    list_rbind(names_to = 'algorithm') |>
+    mutate(
+      rank_cv        = rank(cv),
+      rank_total     = rank(total_miles),
+      rank_max       = rank(max_single_tree_miles),
+      rank_perimeter = rank(hull_perimeter_miles),
+      rank_sum       = rank_cv + rank_total + rank_max + rank_perimeter
+    ) |>
+#    arrange(rank_sum) |>
+    select(algorithm, cv, total_miles, max_single_tree_miles,
+           hull_perimeter_miles, score, rank_sum) |>
+    gt() |>
+    tab_header(title = 'Algorithm Comparison') |>
+    cols_label(
+      algorithm            = 'Algorithm',
+      cv                   = 'CV',
+      total_miles          = html('Total<br>miles'),
+      max_single_tree_miles = html('Max tree<br>dist (mi)'),
+      hull_perimeter_miles = html('Hull<br>perim (mi)'),
+      score                = 'Score',
+      rank_sum             = html('Rank<br>sum')
+    ) |>
+    fmt_number(c(cv, score), decimals = 2) |>
+    fmt_number(c(total_miles, max_single_tree_miles, hull_perimeter_miles), decimals = 1) |>
+    tab_options(table.font.size = '80%', data_row.padding = '4px')
 }
 
 # Summarize counts per person
@@ -128,10 +234,17 @@ show_assignments = function(assigned, people) {
     mutate(label=glue::glue('{Addr.tree} - {count.tree} trees<br>(by {Addr})') |> 
              lapply(htmltools::HTML) |> unname())
   
-  hulls = map_data |> 
-    group_by(person_id) |> 
-    summarize(geom = st_union(geom), color=color[1]) |> 
-    mutate(hull = st_convex_hull(geom) |> st_buffer(50)) |> 
+  people_pts = people |>
+    st_transform(4326) |>
+    select(person_id, color) |>
+    rename(geom = geometry)
+
+  hulls = map_data |>
+    select(person_id, geom, color) |>
+    bind_rows(people_pts) |>
+    group_by(person_id) |>
+    summarize(geom = st_union(geom), color=color[1]) |>
+    mutate(hull = st_convex_hull(geom) |> st_buffer(50)) |>
     st_set_geometry('hull')
   
   people_data = people |> 
@@ -140,15 +253,18 @@ show_assignments = function(assigned, people) {
       count.tree = replace_na(count.tree, 0),
       label = glue::glue('{Addr} ({count.tree} trees)'))
   
-  leaflet(width='100%', height='60vh') |> 
-    setView(-72.667, 42.330, 13) |> 
-    addProviderTiles('CartoDB.Voyager', group='Street') |> 
+  bbox = st_bbox(st_union(st_geometry(map_data), 
+                          st_geometry(people_data) |> st_transform(4326)))
+
+  leaflet(width='100%', height='60vh') |>
+    fitBounds(bbox[['xmin']], bbox[['ymin']], bbox[['xmax']], bbox[['ymax']]) |>
+    addProviderTiles('CartoDB.Positron', group='Street') |> 
     addProviderTiles('Esri.WorldImagery', group='Satellite') |> 
-    addPolygons(data=hulls, fillColor=~color, stroke=FALSE, fillOpacity=0.2,
+    addPolygons(data=hulls, fillColor=~color, stroke=FALSE, fillOpacity=0.3,
                 group='Groups') |> 
     addCircleMarkers(data=map_data, radius=~5+sqrt(count.tree), label=~label,
                    group='Trees',
-                   stroke=FALSE, fillColor=~color, fillOpacity=0.8) |> 
+                   stroke=FALSE, fillColor=~color, fillOpacity=1) |> 
     addCircleMarkers(data = people_data |> st_transform(4326),
                      label = ~label, group='Maintainers',
                      color='black', fillColor=~color, fillOpacity=1,
@@ -156,7 +272,9 @@ show_assignments = function(assigned, people) {
     addLayersControl(baseGroups=c('Street', 'Satellite'),
       overlayGroups=c('Trees', 'Maintainers', 'Groups'),
       options=layersControlOptions(collapsed=FALSE)) |> 
-    addLegend(position='bottomright', colors=people$color, labels=people$Street, opacity=1)|>     addFullscreenControl()
+    # addLegend(position='bottomright',
+    #           colors=people$color, labels=people$Street, opacity=1)|>
+    addFullscreenControl()
 }
 
 # Algorithm 1: Voronoi (Nearest-Person Assignment)
@@ -191,8 +309,9 @@ segment_voronoi = function(trees, people) {
 #
 # @param trees sf object with tree locations (must have 'count' column)
 # @param people sf object with people locations (must have 'count' column)
+# @param tolerance acceptable overflow fraction above capacity (default: 0.1 = 10%)
 # @return sf object of trees with added 'person_id' column
-assign_capacitated_nearest = function(trees, people) {
+assign_capacitated_nearest = function(trees, people, tolerance = 0.1) {
   # Compute distance matrix: trees x people
   dist_matrix = st_distance(trees, people)
 
@@ -228,7 +347,7 @@ assign_capacitated_nearest = function(trees, people) {
     for (person_idx in person_order) {
       new_total = person_totals[person_idx] + tree_count
 
-      if (new_total <= capacities[person_idx]) {
+      if (new_total <= capacities[person_idx] * (1 + tolerance)) {
         assignments[i] = person_idx
         person_totals[person_idx] = new_total
         assigned = TRUE
@@ -247,6 +366,67 @@ assign_capacitated_nearest = function(trees, people) {
   # Add person_id to trees
   trees |>
     mutate(person_id = assignments)
+}
+
+# Post-processing: Pairwise Swap to Reduce Total Distance
+#
+# Iteratively swaps tree assignments between people to reduce total travel
+# distance. For each pair of trees assigned to different people, swaps their
+# assignments if it reduces total distance and keeps both people within
+# tolerance of their capacity.
+#
+# Can be applied after any allocation algorithm.
+#
+# @param assigned sf object with tree assignments (must have 'person_id' and 'count' columns)
+# @param people sf object with people locations (must have 'count' column)
+# @param tolerance acceptable overflow fraction above capacity (default: 0.1 = 10%)
+# @param max_iter maximum swap rounds (default: 20)
+# @return sf object with updated 'person_id' column
+swap_assignments = function(assigned, people, tolerance = 0.1, max_iter = 20) {
+  dist_matrix = as.numeric(st_distance(assigned, people))
+  dim(dist_matrix) = c(nrow(assigned), nrow(people))
+
+  total_trees = sum(assigned$count)
+  total_people = sum(people$count)
+  capacities = people$count * (total_trees / total_people)
+
+  assignments = assigned$person_id
+
+  for (iter in seq_len(max_iter)) {
+    made_swap = FALSE
+
+    for (i in seq_len(nrow(assigned) - 1)) {
+      for (j in (i + 1):nrow(assigned)) {
+        a = assignments[i]
+        b = assignments[j]
+        if (a == b) next
+
+        # Distance saving from swapping
+        saving = (dist_matrix[i, a] + dist_matrix[j, b]) -
+                 (dist_matrix[i, b] + dist_matrix[j, a])
+        if (saving <= 0) next
+
+        # Check balance: swapping shifts counts between a and b
+        delta = assigned$count[i] - assigned$count[j]
+        totals_a = sum(assigned$count[assignments == a])
+        totals_b = sum(assigned$count[assignments == b])
+        new_a = totals_a - delta
+        new_b = totals_b + delta
+
+        if (new_a <= capacities[a] * (1 + tolerance) &&
+            new_b <= capacities[b] * (1 + tolerance) &&
+            new_a >= 0 && new_b >= 0) {
+          assignments[i] = b
+          assignments[j] = a
+          made_swap = TRUE
+        }
+      }
+    }
+
+    if (!made_swap) break
+  }
+
+  assigned |> mutate(person_id = assignments)
 }
 
 # Algorithm 3: Optimal Transport (Greedy Auction)
@@ -480,9 +660,8 @@ assign_voronoi_rebalanced = function(trees, people, max_iter = 10,
 # @param people sf object with people locations (must have 'count' column)
 # @param max_iter maximum iterations (default: 50)
 # @param tolerance convergence tolerance as fraction of capacity (default: 0.05 = 5%)
-# @param alpha learning rate for weight updates (default: auto-computed from distances)
 # @return sf object of trees with added 'person_id' column
-assign_weighted_voronoi = function(trees, people, max_iter = 50, tolerance = 0.05, alpha = NULL) {
+assign_weighted_voronoi = function(trees, people, max_iter = 200, tolerance = 0.05) {
   # Compute target trees per individual person
   total_trees = sum(trees$count)
   total_people = sum(people$count)
@@ -499,13 +678,19 @@ assign_weighted_voronoi = function(trees, people, max_iter = 50, tolerance = 0.0
   dist_matrix_sq = as.numeric(dist_matrix)^2
   dim(dist_matrix_sq) = dim(dist_matrix)  # Restore matrix dimensions
 
-  # Set alpha if not provided (use fraction of mean nearest-neighbor distance squared)
-  if (is.null(alpha)) {
-    mean_nn_dist = mean(apply(dist_matrix, 2, min))
-    alpha = as.numeric(mean_nn_dist^2) * 0.1  # Use 10% as starting point
-  }
+  # Per-person learning rates, floored at the median nn_dist_sq so that central
+  # volunteers (small nn_dist_sq) still converge within max_iter. Distant
+  # volunteers (large nn_dist_sq) get larger alphas to accumulate enough weight
+  # to win trees.
+  nn_dist_sq = apply(dist_matrix_sq, 2, min)
+  alpha_floor = median(nn_dist_sq)
+  alphas = pmax(nn_dist_sq, alpha_floor) / (capacities * max_iter * 0.5)
 
-  # Iterative assignment
+  # Iterative assignment — track the best allocation seen across all iterations
+  # since the algorithm can oscillate past a good solution
+  best_assigned    = NULL
+  best_max_rel_diff = Inf
+
   for (iter in 1:max_iter) {
     # Assign each tree to person minimizing distance^2 - weight
     # Higher weight = more attractive (lower effective distance)
@@ -521,27 +706,75 @@ assign_weighted_voronoi = function(trees, people, max_iter = 50, tolerance = 0.0
       complete(person_id = 1:nrow(people), fill = list(total = 0)) |>
       arrange(person_id)
 
-    # Check convergence
+    # Track best allocation
     diffs = current_totals$total - capacities
     max_rel_diff = max(abs(diffs) / capacities)
 
-    if (max_rel_diff <= tolerance) {
-      break
+    if (max_rel_diff < best_max_rel_diff) {
+      best_max_rel_diff = max_rel_diff
+      best_assigned = assigned
     }
+
+    if (max_rel_diff <= tolerance) break
 
     # Update weights: locations with too few trees get higher weight (more attractive)
     # locations with too many trees get lower weight (less attractive)
-    weights = weights - alpha * diffs
+    weights = weights - alphas * diffs
   }
 
-  assigned
+  best_assigned
+}
+
+# Algorithm 6: Draft Pick (Highest Need First)
+#
+# Volunteers take turns picking their nearest available tree location.
+# At each step, the volunteer with the most remaining capacity (furthest below
+# their fair share) picks next. This guarantees all volunteers receive trees,
+# including those geographically far from the main cluster.
+#
+# @param trees sf object with tree locations (must have 'count' column)
+# @param people sf object with people locations (must have 'count' column)
+# @return sf object of trees with added 'person_id' column
+assign_draft = function(trees, people) {
+  dist_matrix = as.numeric(st_distance(trees, people))
+  dim(dist_matrix) = c(nrow(trees), nrow(people))
+
+  total_trees = sum(trees$count)
+  total_people = sum(people$count)
+  capacities = people$count * (total_trees / total_people)
+
+  assignments = rep(NA_integer_, nrow(trees))
+  available = rep(TRUE, nrow(trees))
+  person_totals = rep(0, nrow(people))
+
+  for (pick in seq_len(nrow(trees))) {
+    # Volunteer with most remaining need picks next
+    current_person = which.max(capacities - person_totals)
+
+    # Their nearest available tree location
+    available_idx = which(available)
+    nearest = available_idx[which.min(dist_matrix[available_idx, current_person])]
+
+    assignments[nearest] = current_person
+    available[nearest] = FALSE
+    person_totals[current_person] = person_totals[current_person] + trees$count[nearest]
+  }
+
+  trees |> mutate(person_id = assignments)
 }
 
 trees_voronoi = segment_voronoi(trees, people)
+# Voronoi baselines used to normalize distance metrics in compute_metrics.
+# Hard-coded from trees_voronoi so scoring works independently of this assignment.
+voronoi_total_miles = 97.35843
+voronoi_max_miles   =  3.860317
+voronoi_hull_perimeter = 33.46792
+
 # summarize_assignments(trees_voronoi, people, 'Voronoi (Nearest person)')
 # show_assignments(trees_voronoi, people)
 
-trees_nearest = assign_capacitated_nearest(trees, people)
+trees_nearest = assign_capacitated_nearest(trees, people, tolerance=0.3) |>
+  swap_assignments(people)
 # summarize_assignments(trees_nearest, people, 'Balanced nearest neighbor')
 # show_assignments(trees_nearest, people)
 
@@ -558,3 +791,7 @@ trees_voronoi_balanced =
 trees_voronoi_weighted = assign_weighted_voronoi(trees, people)
 # summarize_assignments(trees_voronoi_weighted, people, 'Weighted Voronoi')
 # show_assignments(trees_voronoi_weighted, people)
+
+trees_draft = assign_draft(trees, people)
+# summarize_assignments(trees_draft, people, 'Draft Pick')
+# show_assignments(trees_draft, people)
