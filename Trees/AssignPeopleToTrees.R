@@ -137,8 +137,8 @@ summarize_assignments = function(assigned, people, title=NULL) {
     )) |>
     cols_align('left', columns='Addr') |>
     cols_label(Addr='Address',
-               count=html('Number<br>of trees'),
-               total_miles=html('Total<br>miles')) |>
+               count=gt::html('Number<br>of trees'),
+               total_miles=gt::html('Total<br>miles')) |>
     fmt_number(total_miles, decimals=1) |>
     grand_summary_rows(
       columns = total_miles,
@@ -175,11 +175,11 @@ compare_assignments = function(assignments, people) {
     cols_label(
       algorithm            = 'Algorithm',
       cv                   = 'CV',
-      total_miles          = html('Total<br>miles'),
-      max_single_tree_miles = html('Max tree<br>dist (mi)'),
-      hull_perimeter_miles = html('Hull<br>perim (mi)'),
+      total_miles          = gt::html('Total<br>miles'),
+      max_single_tree_miles = gt::html('Max tree<br>dist (mi)'),
+      hull_perimeter_miles = gt::html('Hull<br>perim (mi)'),
       score                = 'Score',
-      rank_sum             = html('Rank<br>sum')
+      rank_sum             = gt::html('Rank<br>sum')
     ) |>
     fmt_number(c(cv, score), decimals = 2) |>
     fmt_number(c(total_miles, max_single_tree_miles, hull_perimeter_miles), decimals = 1) |>
@@ -763,35 +763,216 @@ assign_draft = function(trees, people) {
   trees |> mutate(person_id = assignments)
 }
 
-trees_voronoi = segment_voronoi(trees, people)
+# Algorithm 7: Geographic Clustering (Balanced k-means)
+#
+# Creates k = sum(people$count) geographically compact, balanced clusters of
+# trees, ignoring volunteer locations. Uses k-means++ initialization followed
+# by iterative balanced assignment (trees go to nearest centroid with remaining
+# capacity). Clusters are then assigned to people by a second capacitated greedy
+# step, where person i receives exactly people$count[i] clusters.
+#
+# @param trees sf object with tree locations (must have 'count' column)
+# @param people sf object with people locations (must have 'count' column)
+# @param max_iter maximum k-means iterations (default: 50)
+# @param tolerance convergence tolerance as fraction of capacity (default: 0.1 = 10%)
+# @return sf object of trees with added 'person_id' column
+assign_geographic_clusters = function(trees, people, max_iter = 50, tolerance = 0.1) {
+  k           = sum(people$count)
+  total_trees = sum(trees$count)
+  capacity    = total_trees / k   # target tree-count per cluster
+
+  # Helper: convert an st_distance() result to a plain tibble with
+  # columns named "d1", "d2", ... (one per column of the distance matrix)
+  dist_tbl = function(from, to) {
+    st_distance(from, to) |>
+      units::drop_units() |>
+      as_tibble(.name_repair = ~ paste0('d', seq_along(.)))
+  }
+
+  # --- k-means++ initialization -------------------------------------------
+  # First center is a random tree; each subsequent center is sampled with
+  # probability proportional to squared distance from the nearest existing center.
+  set.seed(4)
+  centers = trees[sample.int(nrow(trees), 1), ] |> select(geom)
+
+  for (i in seq_len(k - 1)) {
+    min_dist_sq = dist_tbl(trees, centers) |>
+      rowwise() |>
+      mutate(min_d = min(c_across(everything())) ^ 2) |>
+      pull(min_d)
+
+    new_idx = sample.int(nrow(trees), 1, prob = min_dist_sq)
+    centers = bind_rows(centers, trees[new_idx, ] |> select(geom))
+  }
+
+  # --- Iterative balanced assignment ----------------------------------------
+  # Each iteration:
+  #   1. Compute distances from every tree to every center
+  #   2. Pre-rank each tree's cluster preferences by distance
+  #   3. Process trees in order of "commitment" (how much they prefer their
+  #      nearest center over their second-nearest)
+  #   4. Assign each tree to its nearest center with remaining capacity
+  #   5. Recompute centers as weighted-mean coordinates of assigned trees
+  cluster_assignments = rep(NA_integer_, nrow(trees))
+
+  for (iter in seq_len(max_iter)) {
+    distances = dist_tbl(trees, centers)
+
+    # Pre-compute each tree's ranked cluster list (nearest first)
+    ranked_clusters_per_tree = distances |>
+      mutate(tree_idx = row_number()) |>
+      pivot_longer(-tree_idx, names_to = 'cluster', values_to = 'dist') |>
+      mutate(cluster_idx = as.integer(str_remove(cluster, 'd'))) |>
+      arrange(tree_idx, dist) |>
+      group_by(tree_idx) |>
+      summarize(ranked = list(cluster_idx))
+
+    # Process order: trees most committed to their nearest center go first
+    tree_order = distances |>
+      rowwise() |>
+      mutate(
+        d_sorted = list(sort(c_across(everything()))),
+        min1     = d_sorted[1],
+        min2     = d_sorted[2]
+      ) |>
+      ungroup() |>
+      mutate(
+        tree_idx   = row_number(),
+        preference = min2 / (min1 + 1e-9)
+      ) |>
+      arrange(desc(preference)) |>
+      pull(tree_idx)
+
+    cluster_totals  = rep(0, k)
+    new_assignments = rep(NA_integer_, nrow(trees))
+
+    for (i in tree_order) {
+      candidates = ranked_clusters_per_tree$ranked[[i]]
+      for (cl in candidates) {
+        if (cluster_totals[cl] + trees$count[i] <= capacity * (1 + tolerance)) {
+          new_assignments[i] = cl
+          cluster_totals[cl] = cluster_totals[cl] + trees$count[i]
+          break
+        }
+      }
+      if (is.na(new_assignments[i])) {
+        # All clusters at capacity — assign to nearest regardless
+        cl = candidates[1]
+        new_assignments[i] = cl
+        cluster_totals[cl] = cluster_totals[cl] + trees$count[i]
+      }
+    }
+
+    # Update centers: weighted-mean coordinates of assigned trees
+    centers = trees |>
+      st_drop_geometry() |>
+      mutate(
+        cluster = new_assignments,
+        x       = st_coordinates(trees)[, 1],
+        y       = st_coordinates(trees)[, 2]
+      ) |>
+      summarize(
+        x = sum(x * count) / sum(count),
+        y = sum(y * count) / sum(count),
+        .by = cluster
+      ) |>
+      arrange(cluster) |>
+      st_as_sf(coords = c('x', 'y'), crs = st_crs(trees)) |>
+      rename(geom = geometry)
+
+    if (identical(cluster_assignments, new_assignments)) break
+    cluster_assignments = new_assignments
+  }
+  print(str_glue('Cluster assignment ended after {iter} iterations'))
+  
+  # --- Assign clusters to people -------------------------------------------
+  # Each person i receives exactly people$count[i] clusters.
+  # Greedy: process clusters nearest-to-some-person first; assign each to
+  # the closest person with remaining capacity.
+  person_capacity   = people$count
+  person_totals     = rep(0L, nrow(people))
+  cluster_to_person = rep(NA_integer_, k)
+
+  cluster_person_dists = dist_tbl(centers, people)
+
+  ranked_people_per_cluster = cluster_person_dists |>
+    mutate(cluster_idx = row_number()) |>
+    pivot_longer(-cluster_idx, names_to = 'person', values_to = 'dist') |>
+    mutate(person_idx = as.integer(str_remove(person, 'd'))) |>
+    arrange(cluster_idx, dist) |>
+    group_by(cluster_idx) |>
+    summarize(ranked = list(person_idx))
+
+  cluster_order = cluster_person_dists |>
+    rowwise() |>
+    mutate(min_d = min(c_across(everything()))) |>
+    ungroup() |>
+    mutate(cluster_idx = row_number()) |>
+    arrange(min_d) |>
+    pull(cluster_idx)
+
+  for (cl in cluster_order) {
+    candidates = ranked_people_per_cluster$ranked[[cl]]
+    for (pid in candidates) {
+      if (person_totals[pid] < person_capacity[pid]) {
+        cluster_to_person[cl] = pid
+        person_totals[pid]    = person_totals[pid] + 1L
+        break
+      }
+    }
+  }
+
+  trees |> mutate(person_id = cluster_to_person[cluster_assignments])
+}
+
+# Save a tree assignment to a named CSV file
+#
+# Writes all columns of the assignment sf object to Trees/assignments/<name>.csv.
+# The geom column is stored as WKT so the file is self-contained.
+#
+# @param assigned sf object with tree assignments
+# @param name character; filename stem (no .csv extension)
+# @return assigned invisibly
+save_assignments = function(assigned, name) {
+  dir = here::here('Trees/assignments')
+  dir.create(dir, showWarnings = FALSE, recursive = TRUE)
+  assigned |>
+    mutate(wkt = st_as_text(geom)) |>
+    st_drop_geometry() |>
+    write_csv(file.path(dir, paste0(name, '.csv')))
+  invisible(assigned)
+}
+
+# Load a named tree assignment from CSV
+#
+# Reads Trees/assignments/<name>.csv and reconstructs the sf object.
+# Stops with an informative error if required columns are missing.
+#
+# @param name character; filename stem (no .csv extension)
+# @return sf object with tree assignments in CRS 26986
+load_assignments = function(name) {
+  path = here::here('Trees/assignments', paste0(name, '.csv'))
+  data = read_csv(path, show_col_types = FALSE) |> 
+    mutate(Ward = as.character(Ward))
+  required = c('person_id', 'count', 'wkt', 'Addr')
+  missing = setdiff(required, names(data))
+  if (length(missing) > 0) {
+    stop('load_assignments: missing required columns: ', paste(missing, collapse = ', '))
+  }
+  st_as_sf(data, wkt = 'wkt', crs = 26986) |> 
+    rename(geom=wkt)
+}
+
+render_assignment = function(name, title = name) {
+  quarto::quarto_render(
+    here::here('Trees/ShowTreeAssignments.qmd'),
+    execute_params = list(title = title, assignment_name = name),
+    output_file    = paste0('Show', name, 'Assignment.html')
+  )
+}
+
 # Voronoi baselines used to normalize distance metrics in compute_metrics.
-# Hard-coded from trees_voronoi so scoring works independently of this assignment.
-voronoi_total_miles = 97.35843
-voronoi_max_miles   =  3.860317
+# Hard-coded so scoring works independently of the voronoi assignment.
+voronoi_total_miles    = 97.35843
+voronoi_max_miles      =  3.860317
 voronoi_hull_perimeter = 33.46792
-
-# summarize_assignments(trees_voronoi, people, 'Voronoi (Nearest person)')
-# show_assignments(trees_voronoi, people)
-
-trees_nearest = assign_capacitated_nearest(trees, people, tolerance=0.3) |>
-  swap_assignments(people)
-# summarize_assignments(trees_nearest, people, 'Balanced nearest neighbor')
-# show_assignments(trees_nearest, people)
-
-trees_optimal = assign_optimal_transport(trees, people)
-# summarize_assignments(trees_optimal, people, 'Minimum total distance')
-# show_assignments(trees_optimal, people)
-
-trees_voronoi_balanced = 
-  assign_voronoi_rebalanced(trees, people)
-# summarize_assignments(trees_voronoi_balanced, people, 
-#                       'Voronoi with Rebalancing')
-# show_assignments(trees_voronoi_balanced, people)
-
-trees_voronoi_weighted = assign_weighted_voronoi(trees, people)
-# summarize_assignments(trees_voronoi_weighted, people, 'Weighted Voronoi')
-# show_assignments(trees_voronoi_weighted, people)
-
-trees_draft = assign_draft(trees, people)
-# summarize_assignments(trees_draft, people, 'Draft Pick')
-# show_assignments(trees_draft, people)

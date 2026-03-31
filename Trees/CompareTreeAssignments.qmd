@@ -12,7 +12,7 @@ execute:
 
 ```{=html}
 <style>
-.quarto-layout-cell:first-child { padding-right: 1em; }
+.quarto-layout-row { column-gap: 2em; }
 </style>
 ```
 
@@ -20,6 +20,15 @@ execute:
 #| label: setup
 #| include: false
 source(here::here('Trees/AssignPeopleToTrees.R'))
+
+trees_voronoi          = segment_voronoi(trees, people)
+trees_nearest          = assign_capacitated_nearest(trees, people, tolerance = 0.3) |>
+  swap_assignments(people)
+trees_optimal          = assign_optimal_transport(trees, people)
+trees_voronoi_balanced = assign_voronoi_rebalanced(trees, people)
+trees_voronoi_weighted = assign_weighted_voronoi(trees, people)
+trees_draft            = assign_draft(trees, people)
+trees_clustered        = assign_geographic_clusters(trees, people)
 ```
 
 ::: {.panel-tabset}
@@ -40,7 +49,8 @@ all_assignments = list(
   'Min Distance'     = trees_optimal,
   'Rebalanced'       = trees_voronoi_balanced,
   'Weighted Zones'   = trees_voronoi_weighted,
-  'Draft Pick'       = trees_draft
+  'Draft Pick'       = trees_draft,
+  'Geographic'       = trees_clustered
 )
 compare_assignments(all_assignments, people)
 ```
@@ -135,6 +145,22 @@ volunteer receives trees, even those who are geographically far from others.
 #| layout: [[45, 55]]
 summarize_assignments(trees_draft, people, 'Draft Pick')
 show_assignments(trees_draft, people)
+```
+
+## Geographic
+
+:::{style="min-height: 5em;"}
+Trees are grouped into geographically compact clusters using balanced k-means,
+ignoring volunteer locations entirely. The number of clusters equals the total
+number of volunteers. Each cluster is then assigned to the nearest volunteer,
+with volunteers who represent multiple people receiving multiple clusters.
+:::
+
+```{r}
+#| label: clustered
+#| layout: [[45, 55]]
+summarize_assignments(trees_clustered, people, 'Geographic')
+show_assignments(trees_clustered, people)
 ```
 
 :::

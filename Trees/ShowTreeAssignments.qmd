@@ -1,0 +1,34 @@
+---
+title: "`r params$title`"
+format:
+  html:
+    embed-resources: true
+    page-layout: full
+execute:
+  echo: false
+  message: false
+  warning: false
+params:
+  title: "Tree Maintenance Assignments"
+  assignment_name: "my_assignment"
+---
+
+```{=html}
+<style>
+.quarto-layout-row { column-gap: 2em; }
+</style>
+```
+
+```{r}
+#| label: setup
+#| include: false
+source(here::here('Trees/AssignPeopleToTrees.R'))
+assigned = load_assignments(params$assignment_name)
+```
+
+```{r}
+#| label: display
+#| layout: [[45, 55]]
+summarize_assignments(assigned, people, params$title)
+show_assignments(assigned, people)
+```
