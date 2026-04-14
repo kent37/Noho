@@ -169,6 +169,7 @@ editor_server = function(assigned, people) {
     rv = reactiveValues(
       assigned         = assigned,
       edit_count       = 0L,
+      full_redraw      = 0L,     # increments to trigger full map re-render (fitBounds)
       map_data         = NULL,   # joined/transformed tree data for click lookup
       pending_tree_row = NULL,
       history          = {
@@ -227,8 +228,9 @@ editor_server = function(assigned, people) {
     observeEvent(input$load_btn, {
       req(input$load_name)
       tryCatch({
-        rv$assigned   = load_assignments(input$load_name)
-        rv$edit_count = 0L
+        rv$assigned     = load_assignments(input$load_name)
+        rv$edit_count   = 0L
+        rv$full_redraw  = rv$full_redraw + 1L
       }, error = function(e) {
         showNotification(conditionMessage(e), type = 'error', duration = 8)
       })
@@ -240,14 +242,18 @@ editor_server = function(assigned, people) {
       shiny::stopApp(rv$assigned)
     })
 
-    # --- Map: initial render -------------------------------------------------
+    # --- Map: initial render (and after Load) --------------------------------
+    # Depends only on rv$full_redraw so that individual edits (which use
+    # leafletProxy below) do not trigger a full re-render and fitBounds reset.
 
     output$map = renderLeaflet({
-      md = left_join(rv$assigned, st_drop_geometry(people),
+      rv$full_redraw  # reactive dependency — do not remove
+      current = isolate(rv$assigned)
+      md = left_join(current, st_drop_geometry(people),
                      join_by(person_id), suffix = c('.tree', '')) |>
         st_transform(4326)
       rv$map_data = md
-      render_map(rv$assigned, people)
+      render_map(current, people)
     })
 
     # --- Map: tree marker click → reassignment modal -------------------------
@@ -276,7 +282,9 @@ editor_server = function(assigned, people) {
           'new_person_id',
           'Assign to:',
           choices  = setNames(people$person_id, people$Addr),
-          selected = current_pid
+          selected = current_pid,
+          selectize = FALSE,
+          size = nrow(people)
         ),
         footer = tagList(
           actionButton('reassign_confirm', 'Update', class = 'btn-primary'),

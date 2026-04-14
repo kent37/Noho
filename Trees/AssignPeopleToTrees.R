@@ -39,7 +39,9 @@ people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
     ) |>
   summarize(count=n(), .by=c(Num, Street, geometry)) |> 
   arrange(Street) |> 
-  mutate(person_id = row_number(), Addr = make_address(Num, Street)) |>
+  mutate(person_id = row_number(), 
+         Street = replace_values(Street, "xBridge Rd" ~ "Bridge Rd"), # fix a hack
+         Addr = make_address(Num, Street)) |>
   st_as_sf(wkt='geometry', crs=26986) |>
   # Assign colors to addresses here for consistency
   # This the Paul Tol rainbow palette
