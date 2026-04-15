@@ -1,7 +1,7 @@
 # Interactive GUI for manually editing tree maintenance assignments.
 #
 # Usage:
-#   source(here::here('Trees/EditAssignments.R'))
+#   source(here::here('Trees/Maintenance/EditAssignments.R'))
 #   trees_edited <- edit_assignments(trees_nearest, people)
 
 library(shiny)
@@ -13,7 +13,7 @@ library(tidyverse)
 library(sf)
 library(here)
 
-source(here::here('Trees/AssignPeopleToTrees.R'))
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
 
 # Launch an interactive Shiny app to manually edit tree assignments.
 #
@@ -34,7 +34,7 @@ edit_assignments = function(assigned, people) {
 
 # List names of saved assignment CSV files (without extension)
 list_saved_names = function() {
-  dir = here::here('Trees/assignments')
+  dir = here::here('Trees/Maintenance/assignments')
   if (!dir.exists(dir)) return(character(0))
   tools::file_path_sans_ext(list.files(dir, pattern = '\\.csv$'))
 }
@@ -200,7 +200,7 @@ editor_server = function(assigned, people) {
 
     observeEvent(input$save_btn, {
       name = trimws(input$save_name)
-      path = here::here('Trees/assignments', paste0(name, '.csv'))
+      path = here::here('Trees/Maintenance/assignments', paste0(name, '.csv'))
       if (file.exists(path)) {
         showModal(modalDialog(
           title = 'Overwrite?',

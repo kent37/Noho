@@ -19,7 +19,7 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-source(here::here('Trees/AssignPeopleToTrees.R'))
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
 
 trees_voronoi          = segment_voronoi(trees, people)
 trees_nearest          = assign_capacitated_nearest(trees, people, tolerance = 0.3) |>

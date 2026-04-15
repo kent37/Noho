@@ -22,7 +22,7 @@ params:
 ```{r}
 #| label: setup
 #| include: false
-source(here::here('Trees/AssignPeopleToTrees.R'))
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
 assigned = load_assignments(params$assignment_name)
 ```
 

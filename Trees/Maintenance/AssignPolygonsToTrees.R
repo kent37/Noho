@@ -1,10 +1,10 @@
 library(tidyverse)
 library(sf)
 
-source(here::here('Trees/AssignPeopleToTrees.R'))
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
 
 # Read pre-defined polygon areas, drop JFK School
-areas = st_read(here::here('Trees/assignments/Assignments.gpkg'), quiet = TRUE) |>
+areas = st_read(here::here('Trees/Maintenance/assignments/Assignments.gpkg'), quiet = TRUE) |>
   filter(Description != 'JFK School') |>
   st_transform(crs = 26986) |>
   mutate(polygon_idx = row_number())

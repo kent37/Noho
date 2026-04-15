@@ -30,7 +30,7 @@ trees = read_sf(here::here('Trees/Planting_by_year.gpkg'), 'map_data') |>
 #              layer_options = "RFC7946=YES")
 
 # Read people and summarize to one row per address
-people = read_csv(here::here('Trees/Tree Maintenance Roster_0206.csv'),
+people = read_csv(here::here('Trees/Maintenance/Tree Maintenance Roster_0206.csv'),
                   comment='#') |> 
   filter(!is.na(geometry)) |> 
   mutate(
@@ -936,7 +936,7 @@ assign_geographic_clusters = function(trees, people, max_iter = 50, tolerance = 
 # @param name character; filename stem (no .csv extension)
 # @return assigned invisibly
 save_assignments = function(assigned, name) {
-  dir = here::here('Trees/assignments')
+  dir = here::here('Trees/Maintenance/assignments')
   dir.create(dir, showWarnings = FALSE, recursive = TRUE)
   assigned |>
     mutate(wkt = st_as_text(geom)) |>
@@ -953,7 +953,7 @@ save_assignments = function(assigned, name) {
 # @param name character; filename stem (no .csv extension)
 # @return sf object with tree assignments in CRS 26986
 load_assignments = function(name) {
-  path = here::here('Trees/assignments', paste0(name, '.csv'))
+  path = here::here('Trees/Maintenance/assignments', paste0(name, '.csv'))
   data = read_csv(path, show_col_types = FALSE) |> 
     mutate(Ward = as.character(Ward))
   required = c('person_id', 'count', 'wkt', 'Addr')
@@ -967,7 +967,7 @@ load_assignments = function(name) {
 
 render_assignment = function(name, title = name) {
   quarto::quarto_render(
-    here::here('Trees/ShowTreeAssignments.qmd'),
+    here::here('Trees/Maintenance/ShowTreeAssignments.qmd'),
     execute_params = list(title = title, assignment_name = name),
     output_file    = paste0('Show', name, 'Assignment.html')
   )
