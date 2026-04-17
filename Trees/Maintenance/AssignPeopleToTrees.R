@@ -10,10 +10,12 @@ make_address = function(num, street) {
   if_else(is.na(num), street, glue::glue('{num} {street}'))
 }
 
+all_trees = read_sf(here::here('Trees/Planting_by_year.gpkg'), 'map_data') |> 
+  st_transform(26986) # Use MA Mainland CRS for consistent geometry
+
 # Trees for 2023 and newer
-trees = read_sf(here::here('Trees/Planting_by_year.gpkg'), 'map_data') |> 
-  st_transform(26986) |> # Use MA Mainland CRS for consistent geometry
-  filter(Year >= 2023) |> # For now, just recent trees
+trees = all_trees |>
+  filter(Year >= 2023) |>
   mutate(Street = str_to_title(Street),
          Addr = make_address(Num, Street))
 

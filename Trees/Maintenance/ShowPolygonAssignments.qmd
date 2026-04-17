@@ -1,0 +1,229 @@
+---
+title: "Tree Maintenance Assignments"
+format:
+  html:
+    embed-resources: true
+    page-layout: full
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{=html}
+<style>
+.quarto-layout-row { column-gap: 2em; }
+</style>
+```
+
+```{r}
+#| label: setup
+#| include: false
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
+library(leaflet)
+library(gt)
+
+gpkg_path = here::here('Trees/Maintenance/assignments/Assignments.gpkg')
+
+# Read expanded polygon assignments; join people for color and address
+polygons = st_read(gpkg_path, layer = 'polygon_areas_edited-expanded', quiet = TRUE) |>
+  left_join(
+    st_drop_geometry(people) |> select(person_id, color, Addr),
+    join_by(person_id)
+  )
+
+# Trees 2017–2025
+trees_all = all_trees |>
+  filter(Year >= 2017, Year <= 2025) |>
+  mutate(
+    Street = str_to_title(Street),
+    Addr   = make_address(Num, Street)
+  )
+
+# Assign trees to polygons via spatial join
+trees_assigned = st_join(
+  trees_all,
+  polygons |> select(person_id),
+  join = st_within
+)
+
+in_multiple = trees_assigned |>
+  st_drop_geometry() |>
+  count(Addr, Year) |>
+  filter(n > 1)
+if (nrow(in_multiple) > 0) {
+  stop(glue::glue('{nrow(in_multiple)} tree location(s) fall within multiple polygons:\n',
+                  paste(in_multiple$Addr, collapse = '\n')))
+}
+
+outside = filter(trees_assigned, is.na(person_id))
+if (nrow(outside) > 0) {
+  stop(glue::glue('{nrow(outside)} tree(s) are not within any polygon:\n',
+                  paste(outside$Addr, collapse = '\n')))
+}
+
+```
+
+```{r}
+#| label: display
+#| layout: [[40, 60]]
+
+# --- Shared summary ----------------------------------------------------------
+trees_assigned_summary = trees_assigned |>
+  st_drop_geometry() |>
+  summarize(
+    recent = sum(count[Year >= 2023]),
+    mid    = sum(count[Year >= 2020 & Year <= 2022]),
+    early  = sum(count[Year >= 2017 & Year <= 2019]),
+    .by    = person_id
+  )
+
+# --- Table -------------------------------------------------------------------
+table_data = trees_assigned_summary |>
+  right_join(
+    st_drop_geometry(people) |> select(person_id, Addr, color),
+    join_by(person_id)
+  ) |>
+  replace_na(list(recent = 0, mid = 0, early = 0)) |>
+  arrange(person_id)
+
+gt_tbl = table_data |>
+  select(Addr, recent, mid, early) |>
+  gt(rowname_col = 'Addr') |>
+  tab_stubhead(label = 'Maintainer') |>
+  cols_label(
+    recent = html('2023–<br>2025'),
+    mid    = html('2020–<br>2022'),
+    early  = html('2017–<br>2019')
+  ) |>
+  cols_align('right', columns = c(recent, mid, early)) |>
+  grand_summary_rows(
+    columns = c(recent, mid, early),
+    fns     = list(Total ~ sum(.)),
+    fmt     = ~fmt_integer(.)
+  ) |>
+  tab_options(table.font.size = '80%', data_row.padding = '4px') |>
+  cols_width(Addr ~ px(160)) |>
+  opt_css('div.gt_container { padding-top: 0 !important; }')
+
+for (i in seq_len(nrow(table_data))) {
+  gt_tbl = gt_tbl |>
+    tab_style(
+      style     = cell_fill(color = adjustcolor(table_data$color[i], 
+                                                alpha.f = 0.3)),
+      locations = list(cells_body(rows = i), cells_stub(rows = i))
+    )
+}
+
+gt_tbl
+
+# --- Map ---------------------------------------------------------------------
+polygons_4326 = polygons |> st_transform(4326)
+people_4326   = people   |> st_transform(4326)
+
+make_label = function(addr, year, name_label) {
+  glue::glue('{addr} ({year})<br>{name_label}') |>
+    as.character() |> 
+    lapply(htmltools::HTML) |> 
+    unname()
+}
+
+trees_recent = trees_assigned |>
+  filter(Year >= 2023) |>
+  mutate(label = make_label(Addr, Year, name_label)) |>
+  st_transform(4326)
+
+trees_mid = trees_assigned |>
+  filter(Year >= 2020, Year <= 2022) |>
+  mutate(label = make_label(Addr, Year, name_label)) |>
+  st_transform(4326)
+
+trees_early = trees_assigned |>
+  filter(Year >= 2017, Year <= 2019) |>
+  mutate(label = make_label(Addr, Year, name_label)) |>
+  st_transform(4326)
+
+people_labels = people |>
+  st_drop_geometry() |>
+  left_join(trees_assigned_summary, join_by(person_id)) |>
+  replace_na(list(recent = 0, mid = 0, early = 0)) |>
+  mutate(
+    label = glue::glue(
+      '<b>{Addr}</b> ({recent + mid + early} trees)<br>2023–2025: <b>{recent}</b><br>2020–2022: <b>{mid}</b><br>2017–2019: <b>{early}</b>'
+    ) |> lapply(htmltools::HTML) |> unname()
+  )
+
+# Connect people to polygons with a line
+connectors = map(seq_len(nrow(people)), \(i) {
+  pid  = people$person_id[i]
+  poly = polygons[polygons$person_id == pid, ]
+  if (nrow(poly) == 0) return(NULL)
+  st_sf(
+    color    = people$color[i],
+    geometry = st_nearest_points(st_geometry(people)[i], st_geometry(poly)[1])
+  )
+}) |>
+  discard(is.null) |>
+  bind_rows() |>
+  st_transform(4326)
+
+leaflet(width = '100%', height = '80vh') |>
+  addProviderTiles('CartoDB.Positron',  group = 'Street') |>
+  addProviderTiles('Esri.WorldImagery', group = 'Satellite') |>
+  addPolygons(
+    data        = polygons_4326,
+    fillColor   = ~color,
+    stroke      = FALSE,
+    fillOpacity = 0.3,
+    group       = 'Groups'
+  ) |>
+  addPolylines(
+    data    = connectors,
+    color   = ~color,
+    weight  = 4,
+    opacity = 0.5,
+    group   = 'Groups'
+  ) |>
+  addCircleMarkers(
+    data        = trees_recent,
+    radius      = 3,
+    label       = ~label,
+    fillColor   = 'black',
+    fillOpacity = 1,
+    stroke      = FALSE,
+    group       = '2023–2025'
+  ) |>
+  addCircleMarkers(
+    data        = trees_mid,
+    radius      = 2.6,
+    label       = ~label,
+    fillColor   = '#1f78b4',
+    fillOpacity = 1,
+    stroke      = FALSE,
+    group       = '2020–2022'
+  ) |>
+  addCircleMarkers(
+    data        = trees_early,
+    radius      = 1.6,
+    label       = ~label,
+    fillColor   = '#fa3f46',
+    fillOpacity = 1,
+    stroke      = FALSE,
+    group       = '2017–2019'
+  ) |>
+  addCircleMarkers(
+    data        = people_4326,
+    radius      = 4,
+    label       = people_labels$label,
+    color       = 'black',
+    fillColor   = ~color,
+    fillOpacity = 1,
+    weight      = 2,
+    group       = 'Maintainers'
+  ) |>
+  addLayersControl(
+    baseGroups    = c('Street', 'Satellite'),
+    overlayGroups = c('Groups', '2023–2025', '2020–2022', '2017–2019', 'Maintainers'),
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
