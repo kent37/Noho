@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Rscript -e \"quarto::quarto_render\\('Maintenance/ShowPolygonAssignments.qmd'\\)\")"
+      "Bash(Rscript -e \"quarto::quarto_render\\('Maintenance/ShowPolygonAssignments.qmd'\\)\")",
+      "Bash(uvx showboat *)",
+      "Bash(dclient *)"
     ]
   }
 }
