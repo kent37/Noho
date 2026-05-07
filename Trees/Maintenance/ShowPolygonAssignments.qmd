@@ -92,9 +92,9 @@ table_data = trees_assigned_summary |>
   arrange(person_id)
 
 gt_tbl = table_data |>
-  select(Addr, recent, mid, early) |>
-  gt(rowname_col = 'Addr') |>
-  tab_stubhead(label = 'Maintainer') |>
+  select(person_id, recent, mid, early) |>
+  gt(rowname_col = 'person_id') |>
+  tab_stubhead(label = 'Group') |>
   cols_label(
     recent = html('2023–<br>2025'),
     mid    = html('2020–<br>2022'),
@@ -107,7 +107,7 @@ gt_tbl = table_data |>
     fmt     = ~fmt_integer(.)
   ) |>
   tab_options(table.font.size = '80%', data_row.padding = '4px') |>
-  cols_width(Addr ~ px(160)) |>
+  cols_width(person_id ~ px(80)) |>
   opt_css('div.gt_container { padding-top: 0 !important; }')
 
 for (i in seq_len(nrow(table_data))) {
@@ -123,7 +123,6 @@ gt_tbl
 
 # --- Map ---------------------------------------------------------------------
 polygons_4326 = polygons |> st_transform(4326)
-people_4326   = people   |> st_transform(4326)
 
 make_label = function(addr, year, name_label) {
   glue::glue('{addr} ({year})<br>{name_label}') |>
@@ -147,29 +146,15 @@ trees_early = trees_assigned |>
   mutate(label = make_label(Addr, Year, name_label)) |>
   st_transform(4326)
 
-people_labels = people |>
+group_labels = polygons_4326 |>
   st_drop_geometry() |>
   left_join(trees_assigned_summary, join_by(person_id)) |>
   replace_na(list(recent = 0, mid = 0, early = 0)) |>
   mutate(
     label = glue::glue(
-      '<b>{Addr}</b> ({recent + mid + early} trees)<br>2023–2025: <b>{recent}</b><br>2020–2022: <b>{mid}</b><br>2017–2019: <b>{early}</b>'
+      '<b>Group{person_id}</b> ({recent + mid + early} trees)<br>2023–2025: <b>{recent}</b><br>2020–2022: <b>{mid}</b><br>2017–2019: <b>{early}</b>'
     ) |> lapply(htmltools::HTML) |> unname()
   )
-
-# Connect people to polygons with a line
-connectors = map(seq_len(nrow(people)), \(i) {
-  pid  = people$person_id[i]
-  poly = polygons[polygons$person_id == pid, ]
-  if (nrow(poly) == 0) return(NULL)
-  st_sf(
-    color    = people$color[i],
-    geometry = st_nearest_points(st_geometry(people)[i], st_geometry(poly)[1])
-  )
-}) |>
-  discard(is.null) |>
-  bind_rows() |>
-  st_transform(4326)
 
 leaflet(width = '100%', height = '80vh') |>
   addProviderTiles('CartoDB.Positron',  group = 'Street') |>
@@ -179,14 +164,8 @@ leaflet(width = '100%', height = '80vh') |>
     fillColor   = ~color,
     stroke      = FALSE,
     fillOpacity = 0.3,
+    label       = group_labels$label,
     group       = 'Groups'
-  ) |>
-  addPolylines(
-    data    = connectors,
-    color   = ~color,
-    weight  = 4,
-    opacity = 0.5,
-    group   = 'Groups'
   ) |>
   addCircleMarkers(
     data        = trees_recent,
@@ -215,19 +194,9 @@ leaflet(width = '100%', height = '80vh') |>
     stroke      = FALSE,
     group       = '2017–2019'
   ) |>
-  addCircleMarkers(
-    data        = people_4326,
-    radius      = 4,
-    label       = people_labels$label,
-    color       = 'black',
-    fillColor   = ~color,
-    fillOpacity = 1,
-    weight      = 2,
-    group       = 'Maintainers'
-  ) |>
   addLayersControl(
     baseGroups    = c('Street', 'Satellite'),
-    overlayGroups = c('Groups', '2023–2025', '2020–2022', '2017–2019', 'Maintainers'),
+    overlayGroups = c('Groups', '2023–2025', '2020–2022', '2017–2019'),
     options       = layersControlOptions(collapsed = FALSE)
   )
 ```
