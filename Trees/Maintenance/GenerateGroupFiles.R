@@ -31,9 +31,9 @@ for (pid in sort(unique(polygons$person_id))) {
     mutate(label = make_tree_label(Addr, Year, name_label)) |>
     st_transform(4326)
 
-  recent = sum(group_trees |> st_drop_geometry() |> filter(Year >= 2023) |> pull(count))
-  mid    = sum(group_trees |> st_drop_geometry() |> filter(Year >= 2020, Year <= 2022) |> pull(count))
-  early  = sum(group_trees |> st_drop_geometry() |> filter(Year >= 2017, Year <= 2019) |> pull(count))
+  recent = sum(trees_recent$count)
+  mid    = sum(trees_mid$count)
+  early  = sum(trees_early$count)
 
   bbox = if (nrow(group_trees) > 0) {
     st_bbox(c(st_geometry(group_poly), st_transform(st_geometry(group_trees), 4326)))
@@ -45,12 +45,6 @@ for (pid in sort(unique(polygons$person_id))) {
     addProviderTiles('CartoDB.Positron',  group = 'Street') |>
     addProviderTiles('Esri.WorldImagery', group = 'Satellite') |>
     fitBounds(bbox[['xmin']], bbox[['ymin']], bbox[['xmax']], bbox[['ymax']]) |>
-    # addPolygons(
-    #   data        = group_poly,
-    #   fillColor   = '#882E72',
-    #   stroke      = FALSE,
-    #   fillOpacity = 0.05
-    # ) |>
     add_tree_layers(trees_recent, trees_mid, trees_early, size_add = 1) |>
     add_tree_legend() |>
     addControl(

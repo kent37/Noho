@@ -24,7 +24,7 @@ load_polygon_assignments = function(gpkg_path) {
     join = st_within
   )
 
-  list(polygons = polygons, trees_all = trees_all, trees_assigned = trees_assigned)
+  list(polygons = polygons, trees_assigned = trees_assigned)
 }
 
 # Build a hover label for a tree point.
@@ -64,7 +64,7 @@ add_tree_layers = function(map, trees_recent, trees_mid, trees_early, size_add =
   if (nrow(trees_early) > 0) {
     map = map |> addCircleMarkers(
       data        = trees_early,
-      radius      = 1.6  + size_add,
+      radius      = 1.6 + size_add,
       label       = ~label,
       fillColor   = '#fa3f46',
       fillOpacity = 1,

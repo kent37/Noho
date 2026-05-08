@@ -30,7 +30,6 @@ library(gt)
 gpkg_path = here::here('Trees/Maintenance/assignments/Assignments.gpkg')
 dat       = load_polygon_assignments(gpkg_path)
 polygons       = dat$polygons
-trees_all      = dat$trees_all
 trees_assigned = dat$trees_assigned
 
 in_multiple = trees_assigned |>
