@@ -24,32 +24,14 @@ execute:
 #| label: setup
 #| include: false
 source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
-library(leaflet)
+source(here::here('Trees/Maintenance/MapHelpers.R'))
 library(gt)
 
 gpkg_path = here::here('Trees/Maintenance/assignments/Assignments.gpkg')
-
-# Read expanded polygon assignments; join people for color and address
-polygons = st_read(gpkg_path, layer = 'polygon_areas_edited-expanded', quiet = TRUE) |>
-  left_join(
-    st_drop_geometry(people) |> select(person_id, color, Addr),
-    join_by(person_id)
-  )
-
-# Trees 2017–2025
-trees_all = all_trees |>
-  filter(Year >= 2017, Year <= 2025) |>
-  mutate(
-    Street = str_to_title(Street),
-    Addr   = make_address(Num, Street)
-  )
-
-# Assign trees to polygons via spatial join
-trees_assigned = st_join(
-  trees_all,
-  polygons |> select(person_id),
-  join = st_within
-)
+dat       = load_polygon_assignments(gpkg_path)
+polygons       = dat$polygons
+trees_all      = dat$trees_all
+trees_assigned = dat$trees_assigned
 
 in_multiple = trees_assigned |>
   st_drop_geometry() |>
@@ -124,76 +106,35 @@ gt_tbl
 # --- Map ---------------------------------------------------------------------
 polygons_4326 = polygons |> st_transform(4326)
 
-make_label = function(addr, year, name_label) {
-  glue::glue('{addr} ({year})<br>{name_label}') |>
-    as.character() |> 
-    lapply(htmltools::HTML) |> 
-    unname()
-}
-
 trees_recent = trees_assigned |>
   filter(Year >= 2023) |>
-  mutate(label = make_label(Addr, Year, name_label)) |>
+  mutate(label = make_tree_label(Addr, Year, name_label)) |>
   st_transform(4326)
 
 trees_mid = trees_assigned |>
   filter(Year >= 2020, Year <= 2022) |>
-  mutate(label = make_label(Addr, Year, name_label)) |>
+  mutate(label = make_tree_label(Addr, Year, name_label)) |>
   st_transform(4326)
 
 trees_early = trees_assigned |>
   filter(Year >= 2017, Year <= 2019) |>
-  mutate(label = make_label(Addr, Year, name_label)) |>
+  mutate(label = make_tree_label(Addr, Year, name_label)) |>
   st_transform(4326)
 
-group_labels = polygons_4326 |>
-  st_drop_geometry() |>
-  left_join(trees_assigned_summary, join_by(person_id)) |>
-  replace_na(list(recent = 0, mid = 0, early = 0)) |>
-  mutate(
-    label = glue::glue(
-      '<b>Group{person_id}</b> ({recent + mid + early} trees)<br>2023–2025: <b>{recent}</b><br>2020–2022: <b>{mid}</b><br>2017–2019: <b>{early}</b>'
-    ) |> lapply(htmltools::HTML) |> unname()
-  )
+polygons_labeled = make_polygon_labels(polygons_4326, trees_assigned_summary)
 
 leaflet(width = '100%', height = '80vh') |>
   addProviderTiles('CartoDB.Positron',  group = 'Street') |>
   addProviderTiles('Esri.WorldImagery', group = 'Satellite') |>
   addPolygons(
-    data        = polygons_4326,
+    data        = polygons_labeled,
     fillColor   = ~color,
     stroke      = FALSE,
     fillOpacity = 0.3,
-    label       = group_labels$label,
+    label       = ~label,
     group       = 'Groups'
   ) |>
-  addCircleMarkers(
-    data        = trees_recent,
-    radius      = 3,
-    label       = ~label,
-    fillColor   = 'black',
-    fillOpacity = 1,
-    stroke      = FALSE,
-    group       = '2023–2025'
-  ) |>
-  addCircleMarkers(
-    data        = trees_mid,
-    radius      = 2.6,
-    label       = ~label,
-    fillColor   = '#1f78b4',
-    fillOpacity = 1,
-    stroke      = FALSE,
-    group       = '2020–2022'
-  ) |>
-  addCircleMarkers(
-    data        = trees_early,
-    radius      = 1.6,
-    label       = ~label,
-    fillColor   = '#fa3f46',
-    fillOpacity = 1,
-    stroke      = FALSE,
-    group       = '2017–2019'
-  ) |>
+  add_tree_layers(trees_recent, trees_mid, trees_early) |>
   addLayersControl(
     baseGroups    = c('Street', 'Satellite'),
     overlayGroups = c('Groups', '2023–2025', '2020–2022', '2017–2019'),

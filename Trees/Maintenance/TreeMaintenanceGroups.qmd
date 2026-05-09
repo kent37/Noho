@@ -1,0 +1,94 @@
+---
+title: "Tree Maintenance Groups"
+format:
+  html:
+    embed-resources: true
+    page-layout: full
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{=html}
+<style>
+.quarto-layout-row { column-gap: 2em; }
+@media (max-width: 768px) {
+  .quarto-layout-row { flex-direction: column; }
+  .quarto-layout-cell { width: 100% !important; flex-basis: 100% !important; }
+}
+</style>
+```
+
+For a map that shows all groups with trees, [click here](ShowPolygonAssignments.html).
+
+```{r}
+#| label: setup
+#| include: false
+source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
+source(here::here('Trees/Maintenance/MapHelpers.R'))
+library(gt)
+
+gpkg_path = here::here('Trees/Maintenance/assignments/Assignments.gpkg')
+dat            = load_polygon_assignments(gpkg_path)
+polygons       = dat$polygons
+trees_assigned = dat$trees_assigned
+
+trees_assigned_summary = trees_assigned |>
+  st_drop_geometry() |>
+  summarize(
+    recent = sum(count[Year >= 2023]),
+    mid    = sum(count[Year >= 2020 & Year <= 2022]),
+    early  = sum(count[Year >= 2017 & Year <= 2019]),
+    .by    = person_id
+  )
+```
+
+```{r}
+#| label: display
+#| layout: [[30, 70]]
+
+# --- Links table -------------------------------------------------------------
+n_groups = n_distinct(polygons$person_id)
+
+tibble::tibble(
+  Group = seq_len(n_groups),
+  Map   = purrr::map(Group, \(i) gt::html(glue::glue(
+    '<a href="maps_and_data/Group_{i}_map.html">Map</a>'
+  ))),
+  CSV   = purrr::map(Group, \(i) gt::html(glue::glue(
+    '<a href="maps_and_data/Group_{i}_data.csv" download>CSV</a>'
+  )))
+) |>
+  gt() |>
+  cols_align('center', columns = c(Map, CSV)) |>
+  tab_options(table.font.size = '90%', data_row.padding = '4px') |>
+  opt_css('div.gt_container { padding-top: 0 !important; }')
+
+# --- Map ---------------------------------------------------------------------
+polygons_4326    = polygons |> st_transform(4326)
+polygons_labeled = make_polygon_labels(polygons_4326, trees_assigned_summary)
+polygon_centroids = polygons_labeled |> st_centroid()
+
+leaflet(width = '100%', height = '80vh') |>
+  addProviderTiles('CartoDB.Positron') |>
+  addPolygons(
+    data        = polygons_labeled,
+    fillColor   = ~color,
+    stroke      = FALSE,
+    fillOpacity = 0.3,
+    label       = ~label
+  ) |>
+  addMarkers(
+    data         = polygon_centroids,
+    icon         = transparent_icon,
+    label        = ~as.character(person_id),
+    labelOptions = labelOptions(
+      permanent = TRUE,
+      noHide    = TRUE,
+      direction = 'center',
+      textOnly  = TRUE,
+      style     = list('font-weight' = 'bold', 'font-size' = '13px', 'color' = '#333')
+    )
+  )
+```
