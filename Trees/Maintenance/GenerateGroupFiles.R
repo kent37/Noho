@@ -42,17 +42,19 @@ for (pid in sort(unique(polygons$person_id))) {
   }
 
   map = leaflet(width = '100%', height = '100vh') |>
-    addProviderTiles('CartoDB.Positron',  group = 'Street') |>
-    addProviderTiles('Esri.WorldImagery', group = 'Satellite') |>
+    addProviderTiles('CartoDB.Positron',  group = 'Positron') |>
+    addProviderTiles('CartoDB.Voyager', group = 'Voyager') |>
+    addProviderTiles('OpenStreetMap.Mapnik', group = 'OSM') |>
+    addProviderTiles('Stadia.StamenTonerLite', group='TonerLite') |> 
     fitBounds(bbox[['xmin']], bbox[['ymin']], bbox[['xmax']], bbox[['ymax']]) |>
-    add_tree_layers(trees_recent, trees_mid, trees_early, size_add = 1) |>
+    add_tree_layers(trees_recent, trees_mid, trees_early, size_add = 2) |>
     add_tree_legend() |>
     addControl(
       html     = make_group_summary_html(pid, recent, mid, early),
       position = 'topleft'
     ) |>
     addLayersControl(
-      baseGroups    = c('Street', 'Satellite'),
+      baseGroups    = c('Positron', 'Voyager', 'OSM', 'TonerLite'),
       overlayGroups = c('2023–2025', '2020–2022', '2017–2019'),
       options       = layersControlOptions(collapsed = FALSE)
     )
