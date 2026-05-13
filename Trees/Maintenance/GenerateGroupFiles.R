@@ -1,6 +1,7 @@
 source(here::here('Trees/Maintenance/AssignPeopleToTrees.R'))
 source(here::here('Trees/Maintenance/MapHelpers.R'))
 library(htmlwidgets)
+library(openxlsx2)
 
 gpkg_path = here::here('Trees/Maintenance/assignments/Assignments.gpkg')
 out_dir   = here::here('Trees/Maintenance/maps_and_data')
@@ -66,15 +67,45 @@ for (pid in sort(unique(polygons$person_id))) {
                selfcontained = TRUE)
   })
 
-  group_trees |>
+  df = group_trees |>
     st_drop_geometry() |>
     mutate(
       Year    = as.integer(Year),
+      Period  = case_when(
+        Year >= 2023 ~ '2023–2025',
+        Year >= 2020 ~ '2020–2022',
+        Year >= 2017 ~ '2017–2019'
+      ),
       Details = str_replace_all(name_label, '<br>', ', ')
     ) |>
-    select(Address = Addr, Year, Count = count, Location, Details) |>
-    arrange(Address, Year) |>
-    write_excel_csv(file.path(out_dir, glue::glue('Group_{pid}_data.csv')))
+    select(Address = Addr, Year, Period, Count = count, Location, Details) |>
+    arrange(desc(Year), Address)
+
+  n_rows      = nrow(df)
+  details_col = which(names(df) == 'Details')
+
+  wb = wb_workbook() |>
+    wb_add_worksheet('Trees') |>
+    wb_add_data_table(x = df, table_style = 'none') |>
+    wb_add_font(
+      dims = wb_dims(rows = 1:(n_rows + 1), cols = 1:ncol(df)),
+      name = 'Arial',
+      size = 14
+    ) |>
+    wb_set_col_widths(
+      cols   = seq_len(ncol(df)),
+      widths = c(20, 6, 11, 7, 12, 44)
+    ) |>
+    wb_page_setup(orientation = 'portrait', fit_to_width = 1)
+
+  if (n_rows > 0) {
+    wb = wb |> wb_add_cell_style(
+      dims      = wb_dims(rows = 2:(n_rows + 1), cols = details_col),
+      wrap_text = TRUE
+    )
+  }
+
+  wb_save(wb, file.path(out_dir, glue::glue('Group_{pid}_data.xlsx')))
 }
 
 message('Done. Files written to ', out_dir)

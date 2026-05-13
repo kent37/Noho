@@ -56,12 +56,12 @@ tibble::tibble(
   Map   = purrr::map(Group, \(i) gt::html(glue::glue(
     '<a href="maps_and_data/Group_{i}_map.html">Map</a>'
   ))),
-  CSV   = purrr::map(Group, \(i) gt::html(glue::glue(
-    '<a href="maps_and_data/Group_{i}_data.csv" download>CSV</a>'
+  Excel = purrr::map(Group, \(i) gt::html(glue::glue(
+    '<a href="maps_and_data/Group_{i}_data.xlsx" download>Excel</a>'
   )))
 ) |>
   gt() |>
-  cols_align('center', columns = c(Map, CSV)) |>
+  cols_align('center', columns = c(Map, Excel)) |>
   tab_options(table.font.size = '90%', data_row.padding = '4px') |>
   opt_css('div.gt_container { padding-top: 0 !important; }')
 
