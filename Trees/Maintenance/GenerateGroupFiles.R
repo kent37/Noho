@@ -58,7 +58,8 @@ for (pid in sort(unique(polygons$person_id))) {
       baseGroups    = c('Positron', 'Voyager', 'OSM', 'TonerLite'),
       overlayGroups = c('2023–2025', '2020–2022', '2017–2019'),
       options       = layersControlOptions(collapsed = FALSE)
-    )
+    ) |>
+    add_mobile_sizing()
 
   withr::with_dir(out_dir, {
     saveWidget(map,

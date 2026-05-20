@@ -120,13 +120,46 @@ make_group_summary_html = function(person_id, recent, mid, early) {
     '<style>',
     'html,body{{margin:0;padding:0}}',
     '.leaflet-top.leaflet-left{{display:flex;flex-direction:row;align-items:flex-start;gap:6px}}',
+    '.group-summary{{background:white;padding:8px 12px;border-radius:4px;border:1px solid #ccc;font-size:13px;line-height:1.6}}',
+    '@media(max-width:768px){{',
+    '.group-summary{{font-size:16px;padding:9px 12px}}',
+    '.leaflet-tooltip{{font-size:14px!important}}',
+    '.info.legend{{font-size:13px}}',
+    '.leaflet-control-layers{{font-size:13px}}',
+    '.leaflet-control-layers-selector{{width:14px;height:14px}}',
+    '.leaflet-control-layers label{{display:flex;align-items:center;gap:6px;padding:2px 0}}',
+    '}}',
     '</style>',
-    '<div style="background:white;padding:8px 12px;border-radius:4px;',
-    'border:1px solid #ccc;font-size:13px;line-height:1.6">',
+    '<div class="group-summary">',
     '<b>Group {person_id}</b> ({total} trees)<br>',
     '2023–2025: <b>{recent}</b><br>',
     '2020–2022: <b>{mid}</b><br>',
     '2017–2019: <b>{early}</b>',
     '</div>'
   )
+}
+
+# On mobile: inject viewport meta (so CSS media queries fire), then double
+# circle-marker radii. addCircleMarkers uses group LayerGroups, so eachLayer
+# yields groups — recurse one level to reach individual CircleMarker objects.
+add_mobile_sizing = function(map) {
+  htmlwidgets::onRender(map, "
+    function(el, x) {
+      if (!document.querySelector('meta[name=viewport]')) {
+        var m = document.createElement('meta');
+        m.name = 'viewport';
+        m.content = 'width=device-width, initial-scale=1';
+        document.head.appendChild(m);
+      }
+      if (window.innerWidth < 768) {
+        this.eachLayer(function(group) {
+          if (typeof group.eachLayer === 'function') {
+            group.eachLayer(function(layer) {
+              if (layer.setRadius) layer.setRadius(layer.getRadius() * 1.6);
+            });
+          }
+        });
+      }
+    }
+  ")
 }
