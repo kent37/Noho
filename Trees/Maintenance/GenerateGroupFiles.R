@@ -61,12 +61,27 @@ for (pid in sort(unique(polygons$person_id))) {
     ) |>
     add_mobile_sizing()
 
+  html_file = file.path(out_dir, glue::glue('Group_{pid}_map.html'))
+
   withr::with_dir(out_dir, {
     saveWidget(map,
                title = glue::glue('Group {pid}'),
                file  = glue::glue('Group_{pid}_map.html'),
                selfcontained = TRUE)
   })
+
+  # htmlwidgets::saveWidget omits a viewport meta tag, so mobile browsers use a
+  # ~980px virtual viewport and fitBounds calculates the wrong zoom. Injecting
+  # it here (into <head> before page load) fixes that; JS injection via onRender
+  # is too late for the browser to act on it.
+  html = readLines(html_file, warn = FALSE)
+  if (!any(grepl('name="viewport"', html, fixed = TRUE))) {
+    head_idx = which(grepl('<head>', html, fixed = TRUE))[1]
+    html = append(html,
+      '<meta name="viewport" content="width=device-width, initial-scale=1">',
+      after = head_idx)
+    writeLines(html, html_file)
+  }
 
   df = group_trees |>
     st_drop_geometry() |>

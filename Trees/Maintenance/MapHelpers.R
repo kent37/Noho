@@ -145,12 +145,6 @@ make_group_summary_html = function(person_id, recent, mid, early) {
 add_mobile_sizing = function(map) {
   htmlwidgets::onRender(map, "
     function(el, x) {
-      if (!document.querySelector('meta[name=viewport]')) {
-        var m = document.createElement('meta');
-        m.name = 'viewport';
-        m.content = 'width=device-width, initial-scale=1';
-        document.head.appendChild(m);
-      }
       if (window.innerWidth < 768) {
         this.eachLayer(function(group) {
           if (typeof group.eachLayer === 'function') {
