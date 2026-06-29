@@ -94,8 +94,8 @@ for (pid in sort(unique(polygons$person_id))) {
       ),
       Details = str_replace_all(name_label, '<br>', ', ')
     ) |>
-    select(Address = Addr, Year, Period, Count = count, Location, Details) |>
-    arrange(desc(Year), Address)
+    arrange(desc(Period), Street, Num) |>
+    select(Address = Addr, Year, Period, Count = count, Location, Details)
 
   n_rows      = nrow(df)
   details_col = which(names(df) == 'Details')
