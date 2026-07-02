@@ -19,7 +19,15 @@ noho = st_read(
   st_transform(nlcd_crs)
 
 # Read a raster layer and clip to a boundary
+# If `path` is a .zip archive, read the .tif inside it directly via
+# GDAL's /vsizip/ virtual file system, without extracting the archive
 read_layer = function(path, mask_layer=noho) {
+  if (str_ends(path, '\\.zip')) {
+    entries = utils::unzip(path, list=TRUE)$Name
+    tif_entry = entries[str_ends(entries, '\\.tif')]
+    path = file.path(paste0('/vsizip/', path), tif_entry)
+  }
+
   rast = rast(path)
   
   # Cropping to extent is fast, do that first
