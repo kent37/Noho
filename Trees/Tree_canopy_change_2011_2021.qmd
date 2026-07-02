@@ -56,8 +56,7 @@ lc_layers =
           .progress='Reading layers')
 
 wards = read_sf(here::here(
-  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp')) |> 
-  st_transform(nlcd_crs)
+  'Shapefiles/Wards_Precincts_2020_Northampton_20211022/Wards_Precincts_2020_Northampton.shp'))
 ```
 
 ```{r helpers}
@@ -193,11 +192,10 @@ The map at the end of this report shows the extents of the three
 city centers.
 
 ```{r city_centers}
-centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPolys') |> 
-  filter(!Code %in% c('L4', 'L5')) |> 
-  st_make_valid() |> 
-  st_transform(nlcd_crs) |> 
-  summarize(.by=City, geometry=st_union(geometry)) |> 
+centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPolys') |>
+  filter(!Code %in% c('L4', 'L5')) |>
+  st_make_valid() |>
+  summarize(.by=City, geometry=st_union(geometry)) |>
   # Clean up Florence a bit
   st_buffer(1) |> 
   st_buffer(-1)
@@ -274,8 +272,7 @@ difference in tree canopy coverage across the different zoning
 categories.
 
 ```{r by_zoning}
-zoning = aggregated_zoning() |> 
-  st_transform(nlcd_crs)
+zoning = aggregated_zoning()
 zone_coverage = pmap_dfr(zoning, function(Class, geometry) {
   clip_and_mean_all(st_sfc(geometry, crs=st_crs(zoning))) |> 
     mutate(Class=Class, .before=1)

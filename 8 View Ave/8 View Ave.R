@@ -19,19 +19,19 @@ bbox = noho |>
 #      xmin      ymin      xmax      ymax 
 # -72.74243  42.28324 -72.58300  42.37614 
 
-project_limit = 
-  read_sf(here::here('8 View Ave/8 View Ave.gpkg'), 'Project limit') |> 
-  st_transform(nlcd_crs)
-
 trees_21_path = here::here('data/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2021_v2021-4/nlcd_tcc_conus_2021_v2021-4.tif')
 trees_21 = read_layer(trees_21_path)
-  
+
 # Some layers have 254 values for NA. Treat them as 0
 trees_21[trees_21==254] = 0
 res_bump=1 # No need for this when using exact_extract()
 #trees_21=terra::disagg(trees_21, res_bump)
 
-clip_and_mean_layer(trees_21, project_limit) |> 
+project_limit =
+  read_sf(here::here('8 View Ave/8 View Ave.gpkg'), 'Project limit') |>
+  st_transform(crs(trees_21))
+
+clip_and_mean_layer(trees_21, project_limit) |>
   mutate(Coverage_Area=Coverage * Area)
 
 #       Area  Coverage Coverage_Area
@@ -41,9 +41,9 @@ clipped = mask(trees_21, vect(project_limit))
 plot(crop(clipped, project_limit))
 plot(project_limit, add=T)
 
-eversource = read_sf(here::here('8 View Ave/8 View Ave.gpkg'), 
-                     'Eversource trees') |> 
-  st_transform(nlcd_crs)
+eversource = read_sf(here::here('8 View Ave/8 View Ave.gpkg'),
+                     'Eversource trees') |>
+  st_transform(crs(trees_21))
 
 clip_and_mean_layer(trees_21, eversource) |> 
   mutate(Coverage_Area=Coverage * Area)

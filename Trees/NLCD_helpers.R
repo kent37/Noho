@@ -6,21 +6,17 @@ library(plotly)
 library(sf)
 library(terra)
 
-# Get a reference CRS
-nlcd_crs = local({
-  ref_path = here::here("data/NLCD_Tree_and_Land/NLCD_2019_Land_Cover_L48_20210604_cE3J3qNGK7bbzFDvKwex.tiff")
-  crs(rast(ref_path))
-})
-
 # Northampton outline
 noho = st_read(
   here::here('Shapefiles/Noho_outline/Noho_outline.gpkg'),
-  quiet=TRUE) |> 
-  st_transform(nlcd_crs)
+  quiet=TRUE)
 
 # Read a raster layer and clip to a boundary
 # If `path` is a .zip archive, read the .tif inside it directly via
-# GDAL's /vsizip/ virtual file system, without extracting the archive
+# GDAL's /vsizip/ virtual file system, without extracting the archive.
+# The raster is kept in its own native CRS; `mask_layer` is reprojected
+# to match it rather than the other way around, so layers with different
+# native CRSs can be mixed freely.
 read_layer = function(path, mask_layer=noho) {
   if (str_ends(path, '\\.zip')) {
     entries = utils::unzip(path, list=TRUE)$Name
@@ -29,10 +25,11 @@ read_layer = function(path, mask_layer=noho) {
   }
 
   rast = rast(path)
-  
+  native_mask = st_transform(mask_layer, crs(rast))
+
   # Cropping to extent is fast, do that first
-  cropped = crop(rast, vect(mask_layer))
-  clipped = mask(cropped, vect(mask_layer))
+  cropped = crop(rast, vect(native_mask))
+  clipped = mask(cropped, vect(native_mask))
   clipped
 }
 
@@ -57,6 +54,7 @@ clip_and_count_all = function(mask) {
 # Clip a single layer to a mask and report the category counts
 # Very fast version using exactextractr::exact_extract
 clip_and_count_layer = function(rast, mask) {
+  mask = st_transform(mask, crs(rast))
   exactextractr::exact_extract(rast, mask, function(df) {
     # df has columns `value` and `coverage_fraction` 
     # with one row per raster cell
@@ -68,6 +66,7 @@ clip_and_count_layer = function(rast, mask) {
 
 # Slower and less accurate version using mask
 clip_and_count_layer_slow = function(rast, mask) {
+  mask = st_transform(mask, crs(rast))
   clipped = mask(rast, vect(mask))
   counts = table(values(clipped), mat=FALSE) %>% 
     as_tibble(.name_repair='universal') %>% 
@@ -87,6 +86,7 @@ clip_and_mean_all = function(mask) {
 # number of acres in the mask and the mean value
 # as a fractional percent
 clip_and_mean_layer = function(rast, mask) {
+  mask = st_transform(mask, crs(rast))
   exactextractr::exact_extract(rast, mask, function(df) {
     # df has columns `value` and `coverage_fraction` 
     # with one row per raster cell
@@ -100,6 +100,7 @@ clip_and_mean_layer = function(rast, mask) {
 
 # Slower and less accurate version using mask
 clip_and_mean_layer_slow = function(rast, mask) {
+  mask = st_transform(mask, crs(rast))
   clipped = mask(rast, vect(mask))
   tibble(
     Coverage=mean(values(clipped), na.rm=TRUE)/100,
@@ -158,8 +159,7 @@ zoning_categories = read_csv(
 all_zoning = st_read(
     here::here('Shapefiles/zoning_20220429/zoning_districts_20220429.shp'),
     quiet=TRUE
-  ) %>% st_transform(nlcd_crs) %>% 
-    select(NAME)
+  ) %>% select(NAME)
 
 aggregated_zoning = function() {
   all_zoning %>% 

@@ -29,16 +29,14 @@ mean(values(tc_2021), na.rm=TRUE) # 56.5%
 
 zoning = aggregated_zoning()
 
-canopy_change = zoning |> 
-  st_transform(nlcd_crs) |> 
-  deframe() |> 
-  map_dbl(~clip_and_mean_layer(tc_2011, mask=.)) |> 
-  enframe(name='Zone', value='2011') |> 
-  inner_join(zoning |> 
-    st_transform(nlcd_crs) |> 
-    deframe() |> 
-    map_dbl(~clip_and_mean_layer(tc_2021, mask=.)) |> 
-    enframe(name='Zone', value='2021')) |> 
+canopy_change = zoning |>
+  deframe() |>
+  map_dbl(~clip_and_mean_layer(tc_2011, mask=.)) |>
+  enframe(name='Zone', value='2011') |>
+  inner_join(zoning |>
+    deframe() |>
+    map_dbl(~clip_and_mean_layer(tc_2021, mask=.)) |>
+    enframe(name='Zone', value='2021')) |>
   mutate(Change=`2021`-`2011`)
 
 plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
