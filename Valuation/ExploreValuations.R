@@ -315,7 +315,7 @@ ggplot(resid_comm_with_value |> filter(Value_per_acre<=10000000), aes(Value_per_
 if (FALSE) {
 # Look at value by zoning category
 # This reads in zoning info...
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 summary_zones = aggregated_zoning() |> 
   st_transform(st_crs(resid_comm_with_value))
 

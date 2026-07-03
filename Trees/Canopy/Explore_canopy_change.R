@@ -1,6 +1,6 @@
 # Look at changes in NLCD tree canopy data
 
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 res_bump = 4
 

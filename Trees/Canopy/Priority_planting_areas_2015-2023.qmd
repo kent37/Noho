@@ -43,7 +43,7 @@ source(here::here('Trees/Read_and_clean_inventory.R'))
 inventory = st_as_sf(inventory, coords=c('LONGITUDE', 'LATITUDE'), crs=4326)
 
 # Canopy coverage data for 2021
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 tc_2021 = read_layer(
   here::here('data/nlcd_tcc_CONUS_all/nlcd_tcc_CONUS_2021_v2021-4/nlcd_tcc_conus_2021_v2021-4.tif')) |> 

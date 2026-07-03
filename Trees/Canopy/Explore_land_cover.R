@@ -1,6 +1,6 @@
 # Explore NLCD tree and land cover data
 
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 lc_2019 = raster::raster(
   here::here('data/NLCD_Tree_and_Land/NLCD_2019_Land_Cover_L48_20210604_cE3J3qNGK7bbzFDvKwex.tiff')

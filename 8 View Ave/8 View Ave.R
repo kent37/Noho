@@ -3,7 +3,7 @@
 library(tidyverse)
 library(exactextractr)
 library(sf)
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 gpkg_path = here::here('8 View Ave/8 View Ave.gpkg')
 

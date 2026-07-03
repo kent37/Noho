@@ -1,6 +1,6 @@
 # Look at changes in NLCD land cover data
 # Updated for 2021 data
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 lc_2001 = read_layer(
   here::here('data/NLCD_Land_Cover_2001-2021/NLCD_2001_Land_Cover_L48_20210604_WHD7sUg1ZU0HbVS6Agh3.tiff')

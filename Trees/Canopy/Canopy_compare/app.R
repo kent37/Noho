@@ -3,7 +3,7 @@
 # 1985-2023 series (v2023-5 WGS84 zip archives).
 #
 # Usage:
-#   shiny::runApp(here::here('Trees/Canopy_compare'))
+#   shiny::runApp(here::here('Trees/Canopy/Canopy_compare'))
 
 library(shiny)
 library(bslib)
@@ -12,7 +12,7 @@ library(terra)
 library(sf)
 library(tidyverse)
 
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 
 # --- Layer discovery ---------------------------------------------------
 

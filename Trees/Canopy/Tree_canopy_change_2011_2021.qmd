@@ -1,5 +1,5 @@
 ---
-title: "Northampton tree canopy change 1985-2023"
+title: "Northampton tree canopy change 2011-2021"
 author: "Kent Johnson"
 toc: true
 callout-icon: false
@@ -28,7 +28,7 @@ library(scales)
 library(sf)
 library(terra)
 
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 ```
 
 ```{r read_data}
@@ -36,23 +36,23 @@ source(here::here('Trees/NLCD_helpers.R'))
 options("rlib_name_repair_verbosity"="quiet")
 
 # Read the raw data and increase the resolution
-lc_files = list.files(here::here('data/nlcd_tcc_CONUS_1985_2023_v2023-5_wgs84'),
-                      pattern = '^nlcd_tcc_CONUS_\\d{4}_v2023-5_wgs84\\.zip$',
+lc_files = list.files(here::here('data/nlcd_tcc_CONUS_all'), 
+                      pattern = '^nlcd_tcc_conus_\\d{4}_v2021-4.tif$',
                       full.names=TRUE, recursive=TRUE)
 
 res_bump = 4
 
 read_tree_layer = function(layer_path) {
   layer = read_layer(layer_path)
-
+  
   # Some layers have 254 values for NA. Treat them as 0
   layer[layer==254] = 0
   disagg(layer, res_bump)
 }
 
-lc_layers =
-  map(set_names(lc_files, basename(lc_files)),
-          read_tree_layer,
+lc_layers = 
+  map(set_names(lc_files, basename(lc_files)), 
+          read_tree_layer, 
           .progress='Reading layers')
 
 wards = read_sf(here::here(
@@ -61,10 +61,10 @@ wards = read_sf(here::here(
 
 ```{r helpers}
 # Plot helpers
-theme_set(theme_minimal(base_size=12) +
+theme_set(theme_minimal(base_size=12) + 
             theme(legend.position='bottom', plot.title=element_text(face='bold')))
-NLCD_year_axis = scale_x_continuous(breaks=seq(1985, 2023, 3),
-                     minor_breaks=seq(1985, 2023))
+NLCD_year_axis = scale_x_continuous(breaks=seq(2001, 2019, 3),
+                     minor_breaks=NULL)
 plot_caption = 'Data: mlrc.gov | Analysis: Kent Johnson'
 
 # Table helpers
@@ -74,28 +74,28 @@ fmt_area = function(x) {
   if_else(x>=100, number(x, accuracy=1, big.mark=','), number(x, 0.1))
 }
 change_table = function(changes, desc, ...) {
-  changes |>
-    filter(Year %in% c(1985, 2023)) |>
-    select(-Change) |>
+  changes |> 
+    filter(Year %in% c(2011, 2021)) |> 
+    select(-Change) |> 
     pivot_wider(names_from='Year', names_glue='{Year}_Percent',
-                values_from=c('Coverage')) |>
-    mutate(Change=`2023_Percent`-`1985_Percent`,
-           Acre_Change=Area*Change) |>
-    mutate(`1985_Acres`=Area*`1985_Percent`, .before='1985_Percent') |>
-    mutate(`2023_Acres`=Area*`2023_Percent`, .before='2023_Percent') |>
-    arrange(desc(`2023_Percent`)) |>
-    gt() |>
+                values_from=c('Coverage')) |> 
+    mutate(Change=`2021_Percent`-`2011_Percent`,
+           Acre_Change=Area*Change) |> 
+    mutate(`2011_Acres`=Area*`2011_Percent`, .before='2011_Percent') |> 
+    mutate(`2021_Acres`=Area*`2021_Percent`, .before='2021_Percent') |> 
+    arrange(desc(`2021_Percent`)) |> 
+    gt() |> 
     cols_label(Change='Percent',
                Acre_Change='Acres',
                Area=html('Total area<br>(acres)'),
                ...) |>
     fmt_percent(columns=c(Change, ends_with('Percent')), decimals=1) |>
-    fmt(columns=c(Area, Acre_Change, ends_with('Acres')), fns=fmt_area) |>
-    tab_spanner('Change', Change:Acre_Change, id='changes') |>
-    tab_spanner_delim('_', starts_with('1985')) |>
-    tab_spanner_delim('_', starts_with('2023')) |>
-    tab_spanner('Coverage', columns=`1985_Acres`:`2023_Percent`) |>
-    tab_header(title=str_glue('Change in tree canopy coverage {desc}, 1985-2023')) |>
+    fmt(columns=c(Area, Acre_Change, ends_with('Acres')), fns=fmt_area) |> 
+    tab_spanner('Change', Change:Acre_Change, id='changes') |> 
+    tab_spanner_delim('_', starts_with('2011')) |> 
+    tab_spanner_delim('_', starts_with('2021')) |> 
+    tab_spanner('Coverage', columns=`2011_Acres`:`2021_Percent`) |> 
+    tab_header(title=str_glue('Change in tree canopy coverage {desc}, 2011-2021')) |> 
     tab_source_note(table_caption)
 }
 ```
@@ -104,63 +104,64 @@ change_table = function(changes, desc, ...) {
 
 This report uses data from the National Land Coverage Database (NLCD)
 to summarize tree canopy changes in Northampton, Mass. from
-1985 to 2023.
+2001 to 2021. 
 
-NLCD data was obtained from the
+NLCD data was obtained from the 
 [Multi-Resolution Land Characteristics Consortium](https://www.mrlc.gov/).
 An interactive viewer for the underlying data is available
 [here](https://www.mrlc.gov/viewer).
 
 The NLCD provides data on tree canopy coverage at 30 meter resolution.
 The percent of canopy coverage is reported for each 30 meter square,
-with data available for each year from 1985 to 2023.
+with data available for each year from 2011 to 2021.
 
 ### Tree canopy in Northampton
 
 ```{r noho_data}
 noho_coverage = clip_and_mean_all(noho)
 noho_max = max(noho_coverage$Coverage)
-noho_max_year = 
-  noho_coverage[which.max(noho_coverage$Coverage), 'Year']
-
 noho_min = min(noho_coverage$Coverage)
-noho_min_year = 
-  noho_coverage[which.min(noho_coverage$Coverage), 'Year']
 noho_net_change = noho_coverage$Coverage[1]-noho_min
 ```
 
-Overall tree canopy coverage in Northampton
-was between 55% and 59% for the entire period 1985-2023.
+Overall tree canopy coverage in Northampton 
+was approximately 57% for the entire period 2011-2021. 
 
 Canopy coverage
-increased greatly from
-**`r percent(noho_coverage$Coverage[1], accuracy=0.1)` in 1987** to a **high of
-`r percent(noho_max, accuracy=0.1)` in 2013**,
-then decreased to **`r percent(noho_min, accuracy=0.1)` in 2023**.
+increased slightly from 
+**`r percent(noho_coverage$Coverage[1], accuracy=0.1)` in 2011** to a **high of
+`r percent(noho_max, accuracy=0.1)` in 2013**, 
+then decreased to a **low of 
+`r percent(noho_min, accuracy=0.1)` in 2021**, 
+a **decline of just over 1%**. 
 
-This chart shows tree canopy coverage for the City as whole.
+Canopy coverage **declined by
+`r percent(noho_net_change, accuracy=0.1)` from 2011 to 2021, a loss of
+`r number(noho_net_change*noho_acres, accuracy=1)` acres.**
+
+This chart shows tree canopy coverage for the City as whole. 
 
 ```{r noho_chart}
 text_anno = tibble(
-  Year=c(noho_max_year, noho_min_year),
+  Year=c(2013, 2021),
   Coverage=c(noho_max, noho_min),
-  hjust=c(0.5, 0.05),
+  hjust=c(0, 1),
   vjust=c(-0.5, 1.5)
-) |>
+) |> 
   mutate(label=paste(
     c('Maximum canopy coverage:', 'Minimum canopy coverage:'),
-    percent(Coverage, accuracy=0.1),
-    'in', Year))
+    percent(Coverage, accuracy=0.1)))
 
 ggplot(noho_coverage, aes(Year, Coverage)) +
   geom_line(color='darkgreen', linewidth=1) +
   geom_text(data=text_anno, aes(label=label, hjust=hjust, vjust=vjust)) +
-  NLCD_year_axis +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL,
-                     limits=c(0.55, 0.60),
-                     labels=label_percent(accuracy=1)) +
+                     #limits=c(0.565, 0.5775),
+                     limits=c(0.56, 0.58),
+                     labels=label_percent(accuracy=0.01)) +
   labs(x='Year', y='Tree canopy coverage (%)',
-       title='Northampton tree canopy coverage, 1985-2023',
+       title='Northampton tree canopy coverage, 2011-2021',
        caption=plot_caption)
 ```
 
@@ -168,10 +169,10 @@ This table shows the canopy percent and the change in percent and
 acres for the entire city.
 
 ```{r noho_table}
-noho_change = noho_coverage %>%
-  arrange(Year) %>%
-  mutate(Change = Coverage-Coverage[1]) |>
-  mutate(City='Northampton', .before=1) %>%
+noho_change = noho_coverage %>% 
+  arrange(Year) %>% 
+  mutate(Change = Coverage-Coverage[1]) |> 
+  mutate(City='Northampton', .before=1) %>% 
   ungroup()
 
 change_table(noho_change, 'in Northampton', City='')
@@ -182,7 +183,7 @@ change_table(noho_change, 'in Northampton', City='')
 ### Tree canopy in city centers
 
 This chart shows the tree canopy coverage within the three city centers
-of Northampton.
+of Northampton. 
 
 Leeds center has the greatest amount of coverage, over 40%.
 Florence center has about 35% coverage while Northampton is about 20%.
@@ -196,65 +197,66 @@ centers = read_sf(here::here('Shapefiles/CityCenters.gpkg'), layer='CityCenterPo
   st_make_valid() |>
   summarize(.by=City, geometry=st_union(geometry)) |>
   # Clean up Florence a bit
-  st_buffer(1) |>
+  st_buffer(1) |> 
   st_buffer(-1)
 
 center_coverage = pmap_dfr(centers, function(City, geometry) {
-  clip_and_mean_all(st_sfc(geometry, crs=st_crs(centers))) |>
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(centers))) |> 
     mutate(City=City, .before=1)
 })
 
-center_labels = center_coverage |>
-  summarize(.by=City, Year=2023.1, Coverage=max(Coverage))
+center_labels = center_coverage |> 
+  summarize(.by=City, Year=2011.1, Coverage=max(Coverage))
 
 # Overall coverage by center
 ggplot(center_coverage, aes(Year, Coverage, color=City, group=City)) +
   geom_line(linewidth=1) +
-  NLCD_year_axis +
-  scale_y_continuous(minor_breaks=NULL,
+  geom_text(data=center_labels, aes(label=City),
+            hjust=-0, vjust=-0.5, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
+  scale_y_continuous(minor_breaks=NULL, limits=c(0, NA),
                      labels=label_percent(accuracy=1)) +
   guides(color='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
-       title='Northampton tree canopy coverage in city centers, 1985-2023',
-       caption=plot_caption) +
-  facet_wrap(~City, ncol=1, scales='free_y')
+       title='Northampton tree canopy coverage in city centers, 2011-2021',
+       caption=plot_caption)
 ```
 
 The next chart shows the change in percent tree canopy coverage in city centers
-since the 1985 baseline.
+since the 2011 baseline.
 
-Leeds is the only city center with increased canopy coverage from 1985 to 2023.
+Leeds is the only city center with increased canopy coverage from 2011 to 2021. 
 Coverage has decreased by almost 2% in Northampton and Florence.
 
 
 ```{r change_by_center}
 # Change in coverage by center
-center_change = center_coverage %>%
-  arrange(Year) %>%
-  group_by(City) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+center_change = center_coverage %>% 
+  arrange(Year) %>% 
+  group_by(City) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
   ungroup()
 
 center_change_labels = tibble(
   City=center_labels$City,
-  Year=2023,
-  Change=c(0.04, 0.005, 0.095)
+  Year=c(2017, 2017, 2017),
+  Change=c(-0.018, -0.002, 0.006)
 )
 
 ggplot(center_change, aes(Year, Change, color=City, group=City)) +
   geom_line(linewidth=1) +
-  geom_text(data=center_change_labels, aes(label=City),
-            hjust=1, fontface='bold') +
-  NLCD_year_axis +
+  geom_text(data=center_change_labels, aes(label=City), 
+            hjust=0, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage in city centers, 1985-2023',
+       title='Change in tree canopy coverage in city centers, 2011-2021',
        caption=plot_caption) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 1985 and 2023 in the three city centers and the change in percent and acres.
+This table shows the canopy coverage in 2011 and 2021 in the three city centers and the change in percent and acres.
 
 ```{r center_change_table}
 change_table(center_change, 'in city centers', City='City center')
@@ -266,47 +268,47 @@ change_table(center_change, 'in city centers', City='City center')
 
 This chart show the tree canopy percent within five zoning categories
 aggregated from the City zoning. Unsurprisingly, there is considerable
-difference in tree canopy coverage across the different zoning
+difference in tree canopy coverage across the different zoning 
 categories.
 
 ```{r by_zoning}
 zoning = aggregated_zoning()
 zone_coverage = pmap_dfr(zoning, function(Class, geometry) {
-  clip_and_mean_all(st_sfc(geometry, crs=st_crs(zoning))) |>
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(zoning))) |> 
     mutate(Class=Class, .before=1)
 })
 
-zone_labels = zone_coverage |>
-  summarize(.by=Class, Year=2023.1, Coverage=max(Coverage))
+zone_labels = zone_coverage |> 
+  summarize(.by=Class, Year=2011.1, Coverage=max(Coverage))
 
 # Overall coverage by zone
 ggplot(zone_coverage, aes(Year, Coverage, color=Class, group=Class)) +
   geom_line(linewidth=1) +
   geom_text(data=zone_labels, aes(label=Class),
-            hjust=1, vjust=-0.5, fontface='bold') +
-  NLCD_year_axis +
+            hjust=-0, vjust=-0.5, fontface='bold') +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL, limits=c(0, 0.7),
                      labels=label_percent(accuracy=1)) +
   guides(color='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
-       title='Northampton tree canopy coverage by zoning category, 1985-2023',
+       title='Northampton tree canopy coverage by zoning category, 2011-2021',
        caption=plot_caption)
 ```
 
-The next chart shows the change in percent tree canopy
-since the 1985 baseline, by zoning category.
+The next chart shows the change in percent tree canopy 
+since the 2011 baseline, by zoning category.
 
-The canopy increase from 1985 to 2013 is mostly in the Rural and
+The canopy increase from 2011 to 2013 is mostly in the Rural and
 Suburban/Water supply zones. All zones have seen a decrease in
 canopy since 2013. The decrease is largest in the
 Business/industrial and Central business zones.
 
 ```{r change_by_zone}
 # Change in coverage by zone
-zone_change = zone_coverage %>%
-  arrange(Year) %>%
-  group_by(Class) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+zone_change = zone_coverage %>% 
+  arrange(Year) %>% 
+  group_by(Class) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
   ungroup()
 
 zone_change_labels = tibble(
@@ -317,18 +319,18 @@ zone_change_labels = tibble(
 
 ggplot(zone_change, aes(Year, Change, color=Class, group=Class)) +
   geom_line(linewidth=1) +
-  geom_text(data=zone_change_labels, aes(label=Class),
+  geom_text(data=zone_change_labels, aes(label=Class), 
             hjust=0, fontface='bold') +
-  NLCD_year_axis +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage by zoning category, 1985-2023',
+       title='Change in tree canopy coverage by zoning category, 2011-2021',
        caption=plot_caption) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 1985 and 2023 by zone.
+This table shows the canopy coverage in 2011 and 2021 by zone.
 
 ```{r zone_change_table}
 change_table(zone_change, 'by zoning category', Class='Zoning class')
@@ -342,14 +344,14 @@ This chart show the tree canopy percent within each voting ward and precinct.
 
 ```{r by_ward}
 ward_coverage = pmap_dfr(wards |> select(WardPrec), function(WardPrec, geometry) {
-  clip_and_mean_all(st_sfc(geometry, crs=st_crs(wards))) |>
+  clip_and_mean_all(st_sfc(geometry, crs=st_crs(wards))) |> 
     mutate(WardPrec=WardPrec, .before=1)
 })
 
-ward_labels = ward_coverage |>
-  filter(Year==2023) |>
-  mutate(Year=2023.1) |>
-  arrange(WardPrec) |>
+ward_labels = ward_coverage |> 
+  filter(Year==2021) |> 
+  mutate(Year=2021.1) |> 
+  arrange(WardPrec) |> 
   mutate(vjust=c(0.5, 0.75, -0.25, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5))
 
 
@@ -358,30 +360,30 @@ ggplot(ward_coverage, aes(Year, Coverage, color=WardPrec, group=WardPrec)) +
   geom_line(linewidth=1) +
   geom_text(data=ward_labels, aes(label=WardPrec, vjust=vjust),
             hjust=-0, fontface='bold') +
-  NLCD_year_axis +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL, limits=c(0, 0.8),
                      labels=label_percent(accuracy=1)) +
   guides(color='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
-       title='Northampton tree canopy coverage by ward and precinct, 1985-2023',
+       title='Northampton tree canopy coverage by ward and precinct, 2011-2021',
        caption=plot_caption)
 ```
 
-The next chart shows the change in percent tree canopy
-since the 1985 baseline, by ward and precinct.
+The next chart shows the change in percent tree canopy 
+since the 2011 baseline, by ward and precinct.
 
 ```{r change_by_ward}
 # Change in coverage by ward
-ward_change = ward_coverage %>%
-  arrange(Year) %>%
-  group_by(WardPrec) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+ward_change = ward_coverage %>% 
+  arrange(Year) %>% 
+  group_by(WardPrec) %>% 
+  mutate(Change = Coverage-Coverage[1]) %>% 
   ungroup()
 
-ward_change_labels = ward_change |>
-  filter(Year==2023) |>
-  mutate(Year=2023.1) |>
-  arrange(WardPrec) |>
+ward_change_labels = ward_change |> 
+  filter(Year==2021) |> 
+  mutate(Year=2021.1) |> 
+  arrange(WardPrec) |> 
   mutate(vjust=c(0.5, 0, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 1, 0.5, 0.5))
 
 
@@ -389,16 +391,16 @@ ggplot(ward_change, aes(Year, Change, color=WardPrec, group=WardPrec)) +
   geom_line(linewidth=1) +
   geom_text(data=ward_change_labels, aes(label=WardPrec, vjust=vjust),
             hjust=0, fontface='bold') +
-  NLCD_year_axis +
+  scale_x_continuous(breaks=2011:2021, minor_breaks=NULL) +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage by ward and precinct, 1985-2023',
+       title='Change in tree canopy coverage by ward and precinct, 2011-2021',
        caption=plot_caption) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 1985 and 2023 by ward and precinct.
+This table shows the canopy coverage in 2011 and 2021 by ward and precinct.
 
 ```{r ward_change_table}
 change_table(ward_change, 'by ward and precinct', WardPrec='Ward and precinct')
@@ -406,60 +408,60 @@ change_table(ward_change, 'by ward and precinct', WardPrec='Ward and precinct')
 
 ### Canopy change map
 
-This map shows the change in tree canopy percent from 1985 to 2023.
+This map shows the change in tree canopy percent from 2011 to 2021.
 Overlays show Northampton city centers,
 zoning categories as aggregated for this
 report, and wards and precincts.
 
 ```{r zoning_map}
-tc_1985 = lc_layers$`nlcd_tcc_CONUS_1985_v2023-5_wgs84.zip`
+tc_2011 = lc_layers$`nlcd_tcc_conus_2011_v2021-4.tif`
 # 254 is a "non-processing" area
-tc_1985[tc_1985==254] = NA
+tc_2011[tc_2011==254] = NA
 
-tc_2023 = lc_layers$`nlcd_tcc_CONUS_2023_v2023-5_wgs84.zip`
-tc_change = (tc_2023 - tc_1985) |>
+tc_2021 = lc_layers$`nlcd_tcc_conus_2021_v2021-4.tif`
+tc_change = (tc_2021 - tc_2011) |> 
   project('epsg:4326')
 tc_change[tc_change==0] = NA
 
 tc_colors = colorNumeric('PiYG', c(-100, 100), na.color=NA)
 tc_colors_rev = colorNumeric('PiYG', c(-100, 100), na.color=NA, reverse=TRUE)
 
-map = leaflet(width='95%', height='700px') %>%
-  setView(-72.667, 42.330, 12) %>%
-  addProviderTiles('CartoDB.Positron', group='Basic map') %>%
-  addTiles(group='OpenStreetMap') %>%
+map = leaflet(width='95%', height='700px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
   addProviderTiles('Esri.WorldImagery', group='Satellite')
-
-zone_colors = RColorBrewer::brewer.pal(5, 'Set1') |>
-  set_names(c("Urban", "Suburban/Water supply", "Rural",
-              "Business/industrial",
+  
+zone_colors = RColorBrewer::brewer.pal(5, 'Set1') |> 
+  set_names(c("Urban", "Suburban/Water supply", "Rural", 
+              "Business/industrial", 
               "Central business"))
 
-zones = all_zoning |>
-  left_join(zoning_categories, by=c(NAME='Zone')) |>
-  summarize(.by=Category, geometry = sf::st_union(geometry)) |>
+zones = all_zoning |> 
+  left_join(zoning_categories, by=c(NAME='Zone')) |> 
+  summarize(.by=Category, geometry = sf::st_union(geometry)) |> 
   mutate(color=unname(zone_colors[Category]))
 
 #zones$label=str_glue_data(zones, '{Category} ({NAME})')
 
   map %>%
-    addRasterImage(tc_change, colors=tc_colors, group='Change') |>
+    addRasterImage(tc_change, colors=tc_colors, group='Change') |> 
     addPolygons(data=zones |> st_transform(4326),
                 weight=0.5, group='Zones',
                 color='grey',
                 fillColor=~color,
                 fillOpacity=0.1,
-                label=~Category) %>%
+                label=~Category) %>% 
     addPolygons(data=centers |> st_transform(4326),
                 weight=1, color='black',
-                fill=FALSE, group='Centers') |>
+                fill=FALSE, group='Centers') |> 
     addPolygons(data=wards |> st_transform(4326),
                 weight=1, color='steelblue',
                 fill=FALSE, group='Wards & Precincts',
                 label=~WardPrec,
-                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |>
+                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |> 
     addPolygons(data=noho %>% st_transform(4326),
-                weight=1, fill=FALSE, color='grey') %>%
+                weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(
       baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
       overlayGroups=c('Change', 'Centers', 'Zones', 'Wards & Precincts'),
@@ -469,7 +471,7 @@ zones = all_zoning |>
     addLegend(pal=tc_colors_rev, values=seq(-100, 100, 20),
               labFormat = labelFormat(
                 transform = function(x) sort(x, decreasing = TRUE)),
-              title='Canopy change %') |>
+              title='Canopy change %') |> 
     addLegend(colors=zone_colors, labels=names(zone_colors),
               title='Aggregated zoning')
 
@@ -477,54 +479,54 @@ zones = all_zoning |>
 
 ### Low canopy map
 
-This map shows areas of the city with less than 20% tree canopy in 2023 in pink.
+This map shows areas of the city with less than 20% tree canopy in 2021 in pink.
 Overlays show Northampton city centers,
 zoning categories as aggregated for this
 report, and wards and precincts.
 
 ```{r low_canopy_map}
-tc_low = tc_2023 |>
+tc_low = tc_2021 |> 
   project('epsg:4326')
 tc_low[tc_low>=20] = NA
 tc_low[!is.na(tc_low)] = 0
 
-map = leaflet(width='95%', height='700px') %>%
-  setView(-72.667, 42.330, 12) %>%
-  addProviderTiles('CartoDB.Positron', group='Basic map') %>%
-  addTiles(group='OpenStreetMap') %>%
+map = leaflet(width='95%', height='700px') %>% 
+  setView(-72.667, 42.330, 12) %>% 
+  addProviderTiles('CartoDB.Positron', group='Basic map') %>% 
+  addTiles(group='OpenStreetMap') %>% 
   addProviderTiles('Esri.WorldImagery', group='Satellite')
 
   map %>%
-    addRasterImage(tc_low,
-                   colors=colorNumeric('red', 0, na.color=NA),
-                   opacity=0.4, group='Canopy < 20%') |>
+    addRasterImage(tc_low, 
+                   colors=colorNumeric('red', 0, na.color=NA), 
+                   opacity=0.4, group='Canopy < 20%') |> 
     addPolygons(data=zones |> st_transform(4326),
                 weight=0.5, group='Zones',
                 color='grey',
                 fillColor=~color,
                 fillOpacity=0.1,
-                label=~Category) %>%
+                label=~Category) %>% 
     addPolygons(data=centers |> st_transform(4326),
                 weight=1, color='black',
-                fill=FALSE, group='Centers') |>
+                fill=FALSE, group='Centers') |> 
     addPolygons(data=wards |> st_transform(4326),
                 weight=1, color='steelblue',
                 fill=FALSE, group='Wards & Precincts',
                 label=~WardPrec,
-                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |>
+                labelOptions=labelOptions(direction='center', permanent=TRUE, textOnly=TRUE)) |> 
     addPolygons(data=noho %>% st_transform(4326),
-                weight=1, fill=FALSE, color='grey') %>%
+                weight=1, fill=FALSE, color='grey') %>% 
     addLayersControl(
       baseGroups=c('Basic map', 'OpenStreetMap', 'Satellite'),
       overlayGroups=c('Canopy < 20%', 'Centers', 'Zones', 'Wards & Precincts'),
       options=layersControlOptions(collapsed=FALSE)) %>%
     addLegend(colors=zone_colors, labels=names(zone_colors),
-              title='Aggregated zoning') |>
+              title='Aggregated zoning') |> 
     hideGroup('Zones')
 
 ```
 <small>Copyright `r format(Sys.Date(), '%Y')` Kent S Johnson
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
-  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline"
+  <img alt="Creative Commons License" style="border-width:0;vertical-align:middle;display:inline" 
   src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" target="_blank"/></a>
   <span style='float:right;font-style: italic;'>`r Sys.Date()`</span></small>

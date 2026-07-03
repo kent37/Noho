@@ -28,7 +28,7 @@ library(gt)
 library(sf)
 library(terra)
 
-source(here::here('Trees/NLCD_helpers.R'))
+source(here::here('Trees/Canopy/NLCD_helpers.R'))
 ```
 
 ```{r read_data}
