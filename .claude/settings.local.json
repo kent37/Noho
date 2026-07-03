@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "mcp__r-btw__btw_tool_env_describe_environment",
-      "Bash(Rscript -e ' *)"
+      "Bash(Rscript -e ' *)",
+      "Bash(quarto render *)"
     ]
   },
   "sandbox": {
