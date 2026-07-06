@@ -75,13 +75,14 @@ fmt_area = function(x) {
 }
 change_table = function(changes, desc, ...) {
   changes |>
-    filter(Year %in% c(1985, 2023)) |>
+    filter(Year %in% c(1985, 2000, 2023)) |>
     select(-Change) |>
     pivot_wider(names_from='Year', names_glue='{Year}_Percent',
                 values_from=c('Coverage')) |>
-    mutate(Change=`2023_Percent`-`1985_Percent`,
+    mutate(Change=`2023_Percent`-`2000_Percent`,
            Acre_Change=Area*Change) |>
     mutate(`1985_Acres`=Area*`1985_Percent`, .before='1985_Percent') |>
+    mutate(`2000_Acres`=Area*`2000_Percent`, .before='2000_Percent') |>
     mutate(`2023_Acres`=Area*`2023_Percent`, .before='2023_Percent') |>
     arrange(desc(`2023_Percent`)) |>
     gt() |>
@@ -91,8 +92,9 @@ change_table = function(changes, desc, ...) {
                ...) |>
     fmt_percent(columns=c(Change, ends_with('Percent')), decimals=1) |>
     fmt(columns=c(Area, Acre_Change, ends_with('Acres')), fns=fmt_area) |>
-    tab_spanner('Change', Change:Acre_Change, id='changes') |>
+    tab_spanner('Change (2000-2023)', Change:Acre_Change, id='changes') |>
     tab_spanner_delim('_', starts_with('1985')) |>
+    tab_spanner_delim('_', starts_with('2000')) |>
     tab_spanner_delim('_', starts_with('2023')) |>
     tab_spanner('Coverage', columns=`1985_Acres`:`2023_Percent`) |>
     tab_header(title=str_glue('Change in tree canopy coverage {desc}, 1985-2023')) |>
@@ -134,9 +136,9 @@ was between 55% and 59% for the entire period 1985-2023.
 
 Canopy coverage
 increased greatly from
-**`r percent(noho_coverage$Coverage[1], accuracy=0.1)` in 1987** to a **high of
+**`r percent(noho_min, accuracy=0.1)` in 1987** to a **high of
 `r percent(noho_max, accuracy=0.1)` in 2013**,
-then decreased to **`r percent(noho_min, accuracy=0.1)` in 2023**.
+then decreased to **`r percent(noho_coverage$Coverage[39], accuracy=0.1)` in 2023**.
 
 This chart shows tree canopy coverage for the City as whole.
 
