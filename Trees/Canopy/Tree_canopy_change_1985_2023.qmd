@@ -27,6 +27,7 @@ library(gt)
 library(scales)
 library(sf)
 library(terra)
+library(ggh4x)
 
 source(here::here('Trees/Canopy/NLCD_helpers.R'))
 ```
@@ -129,16 +130,22 @@ noho_min = min(noho_coverage$Coverage)
 noho_min_year = 
   noho_coverage[which.min(noho_coverage$Coverage), 'Year']
 noho_net_change = noho_coverage$Coverage[1]-noho_min
+
+# Easy access to coverage by year
+coverage = deframe(noho_coverage |> select(Year, Coverage))
 ```
 
 Overall tree canopy coverage in Northampton
-was between 55% and 59% for the entire period 1985-2023.
+was between 55% and 60% for the entire period 1985-2023.
 
 Canopy coverage
-increased greatly from
-**`r percent(noho_min, accuracy=0.1)` in 1987** to a **high of
-`r percent(noho_max, accuracy=0.1)` in 2013**,
-then decreased to **`r percent(noho_coverage$Coverage[39], accuracy=0.1)` in 2023**.
+increased steadily from
+**`r percent(noho_min, accuracy=0.1)` in `r noho_min_year`** 
+to **`r percent(coverage['2000'], accuracy=0.1)` in 2000**, then
+increased slowly
+to a **high of `r percent(noho_max, accuracy=0.1)` 
+in `r noho_max_year`**,
+then decreased to **`r percent(coverage['2023'], accuracy=0.1)` in 2023**.
 
 This chart shows tree canopy coverage for the City as whole.
 
@@ -167,12 +174,16 @@ ggplot(noho_coverage, aes(Year, Coverage)) +
 ```
 
 This table shows the canopy percent and the change in percent and
-acres for the entire city.
+acres for the entire city. Change is shown from 2000 to 2023.
+
 
 ```{r noho_table}
+change_base_year = 2000
+change_base_row = which(noho_coverage$Year == change_base_year)
+
 noho_change = noho_coverage %>%
   arrange(Year) %>%
-  mutate(Change = Coverage-Coverage[1]) |>
+  mutate(Change = Coverage-Coverage[change_base_row]) |>
   mutate(City='Northampton', .before=1) %>%
   ungroup()
 
@@ -209,24 +220,32 @@ center_coverage = pmap_dfr(centers, function(City, geometry) {
 center_labels = center_coverage |>
   summarize(.by=City, Year=2023.1, Coverage=max(Coverage))
 
+center_order = c('Leeds', 'Florence', 'Northampton')
+center_colors = set_names(hue_pal()(length(center_order)), center_order)
+
 # Overall coverage by center
-ggplot(center_coverage, aes(Year, Coverage, color=City, group=City)) +
+ggplot(center_coverage |> mutate(City=factor(City, levels=center_order)),
+       aes(Year, Coverage, color=City, group=City)) +
   geom_line(linewidth=1) +
   NLCD_year_axis +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=1)) +
-  guides(color='none') +
+  scale_color_manual(values=center_colors, guide='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
        title='Northampton tree canopy coverage in city centers, 1985-2023',
        caption=plot_caption) +
-  facet_wrap(~City, ncol=1, scales='free_y')
+  facet_wrap2(~City, ncol=1, scales='free_y',
+              strip=strip_themed(
+                text_x=elem_list_text(colour=center_colors[center_order],
+                                      size=rep(12, 3), face=rep('bold', 3))
+              ))
 ```
 
 The next chart shows the change in percent tree canopy coverage in city centers
-since the 1985 baseline.
+since the 2000 baseline.
 
-Leeds is the only city center with increased canopy coverage from 1985 to 2023.
-Coverage has decreased by almost 2% in Northampton and Florence.
+Leeds is the only city center with increased canopy coverage from 2000 to 2023.
+Coverage has remained roughly constant Northampton and Florence.
 
 
 ```{r change_by_center}
@@ -234,16 +253,17 @@ Coverage has decreased by almost 2% in Northampton and Florence.
 center_change = center_coverage %>%
   arrange(Year) %>%
   group_by(City) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+  mutate(Change = Coverage-Coverage[change_base_row]) %>%
   ungroup()
 
 center_change_labels = tibble(
   City=center_labels$City,
   Year=2023,
-  Change=c(0.04, 0.005, 0.095)
+  Change=c(0.005, 0.01, 0.048)
 )
 
-ggplot(center_change, aes(Year, Change, color=City, group=City)) +
+ggplot(center_change |> filter(Year >= change_base_year), 
+       aes(Year, Change, color=City, group=City)) +
   geom_line(linewidth=1) +
   geom_text(data=center_change_labels, aes(label=City),
             hjust=1, fontface='bold') +
@@ -251,12 +271,12 @@ ggplot(center_change, aes(Year, Change, color=City, group=City)) +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage in city centers, 1985-2023',
+       title='Change in tree canopy coverage in city centers, 2000-2023',
        caption=plot_caption) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 1985 and 2023 in the three city centers and the change in percent and acres.
+This table shows the canopy coverage in 1985, 2000 and 2023 in the three city centers and the change in percent and acres.
 
 ```{r center_change_table}
 change_table(center_change, 'in city centers', City='City center')
@@ -296,41 +316,44 @@ ggplot(zone_coverage, aes(Year, Coverage, color=Class, group=Class)) +
 ```
 
 The next chart shows the change in percent tree canopy
-since the 1985 baseline, by zoning category.
+since the 2000 baseline, by zoning category.
 
-The canopy increase from 1985 to 2013 is mostly in the Rural and
-Suburban/Water supply zones. All zones have seen a decrease in
-canopy since 2013. The decrease is largest in the
-Business/industrial and Central business zones.
+The Rural and
+Suburban/Water supply zones show a slight decrease in canopy over this period. 
+The Urban, Business/industrial and Central Business zones have seen a 
+slight increase.
 
 ```{r change_by_zone}
 # Change in coverage by zone
 zone_change = zone_coverage %>%
   arrange(Year) %>%
   group_by(Class) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+  mutate(Change = Coverage-Coverage[change_base_row]) %>%
   ungroup()
 
-zone_change_labels = tibble(
-  Class=zone_labels$Class,
-  Year=c(2017, 2016, 2017, 2016.4, 2020),
-  Change=c(-0.009, -0.018, -0.002, -0.0065, -0.011)
-)
+zone_order = c('Suburban/Water supply', 'Rural', 'Urban',
+               'Business/industrial', 'Central business')
+zone_colors = set_names(hue_pal()(length(zone_order)), sort(zone_order))
 
-ggplot(zone_change, aes(Year, Change, color=Class, group=Class)) +
+ggplot(zone_change |> filter(Year >= change_base_year) |>
+         mutate(Class=factor(Class, levels=zone_order)),
+       aes(Year, Change, color=Class, group=Class)) +
   geom_line(linewidth=1) +
-  geom_text(data=zone_change_labels, aes(label=Class),
-            hjust=0, fontface='bold') +
   NLCD_year_axis +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
+  scale_color_manual(values=zone_colors, guide='none') +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage by zoning category, 1985-2023',
+       title='Change in tree canopy coverage by zoning category, 2000-2023',
        caption=plot_caption) +
-  guides(color='none')
+  facet_wrap2(~Class, ncol=1, scales='free_y',
+              strip=strip_themed(
+                text_x=elem_list_text(colour=zone_colors[zone_order],
+                                      size=rep(12, 5), face=rep('bold', 5))
+              ))
 ```
 
-This table shows the canopy coverage in 1985 and 2023 by zone.
+This table shows the canopy coverage in 1985, 2000 and 2023 by zone.
 
 ```{r zone_change_table}
 change_table(zone_change, 'by zoning category', Class='Zoning class')
@@ -343,6 +366,8 @@ change_table(zone_change, 'by zoning category', Class='Zoning class')
 This chart show the tree canopy percent within each voting ward and precinct.
 
 ```{r by_ward}
+#| fig-height: 8
+
 ward_coverage = pmap_dfr(wards |> select(WardPrec), function(WardPrec, geometry) {
   clip_and_mean_all(st_sfc(geometry, crs=st_crs(wards))) |>
     mutate(WardPrec=WardPrec, .before=1)
@@ -361,7 +386,7 @@ ggplot(ward_coverage, aes(Year, Coverage, color=WardPrec, group=WardPrec)) +
   geom_text(data=ward_labels, aes(label=WardPrec, vjust=vjust),
             hjust=-0, fontface='bold') +
   NLCD_year_axis +
-  scale_y_continuous(minor_breaks=NULL, limits=c(0, 0.8),
+  scale_y_continuous(minor_breaks=NULL, limits=c(0.1, 0.8),
                      labels=label_percent(accuracy=1)) +
   guides(color='none') +
   labs(x='Year', y='Tree canopy coverage (%)',
@@ -370,14 +395,16 @@ ggplot(ward_coverage, aes(Year, Coverage, color=WardPrec, group=WardPrec)) +
 ```
 
 The next chart shows the change in percent tree canopy
-since the 1985 baseline, by ward and precinct.
+since the 2000 baseline, by ward and precinct.
 
 ```{r change_by_ward}
+#| fig-height: 6
+
 # Change in coverage by ward
 ward_change = ward_coverage %>%
   arrange(Year) %>%
   group_by(WardPrec) %>%
-  mutate(Change = Coverage-Coverage[1]) %>%
+  mutate(Change = Coverage-Coverage[change_base_row]) %>%
   ungroup()
 
 ward_change_labels = ward_change |>
@@ -387,7 +414,8 @@ ward_change_labels = ward_change |>
   mutate(vjust=c(0.5, 0, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 1, 0.5, 0.5))
 
 
-ggplot(ward_change, aes(Year, Change, color=WardPrec, group=WardPrec)) +
+ggplot(ward_change |> filter(Year >= change_base_year),
+       aes(Year, Change, color=WardPrec, group=WardPrec)) +
   geom_line(linewidth=1) +
   geom_text(data=ward_change_labels, aes(label=WardPrec, vjust=vjust),
             hjust=0, fontface='bold') +
@@ -395,12 +423,12 @@ ggplot(ward_change, aes(Year, Change, color=WardPrec, group=WardPrec)) +
   scale_y_continuous(minor_breaks=NULL,
                      labels=label_percent(accuracy=0.1)) +
   labs(x='Year', y='Change in tree canopy coverage (%)',
-       title='Change in tree canopy coverage by ward and precinct, 1985-2023',
+       title='Change in tree canopy coverage by ward and precinct, 2000-2023',
        caption=plot_caption) +
   guides(color='none')
 ```
 
-This table shows the canopy coverage in 1985 and 2023 by ward and precinct.
+This table shows the canopy coverage in 1985, 2000 and 2023 by ward and precinct.
 
 ```{r ward_change_table}
 change_table(ward_change, 'by ward and precinct', WardPrec='Ward and precinct')
@@ -408,7 +436,7 @@ change_table(ward_change, 'by ward and precinct', WardPrec='Ward and precinct')
 
 ### Canopy change map
 
-This map shows the change in tree canopy percent from 1985 to 2023.
+This map shows the change in tree canopy percent from 2000 to 2023.
 Overlays show Northampton city centers,
 zoning categories as aggregated for this
 report, and wards and precincts.
