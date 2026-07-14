@@ -1,0 +1,12 @@
+name: Canopy_compare
+title: Canopy_compare
+username: kent37
+account: kent37
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17611615
+bundleId: 12267969
+url: https://kent37.shinyapps.io/Canopy_compare/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

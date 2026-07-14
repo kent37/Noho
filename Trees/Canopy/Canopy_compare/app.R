@@ -1,6 +1,7 @@
-# Compare tree canopy cover between any two NLCD Tree Canopy Cover layers,
-# drawn from either the 2011-2021 series (v2021-4 tif files) or the
-# 1985-2023 series (v2023-5 WGS84 zip archives).
+# Compare tree canopy cover between any two years of the NLCD Tree Canopy
+# Cover 1985-2023 series. Reads from canopy_data.gpkg, a pre-clipped extract
+# built by Trees/Canopy/ExtractCanopy.R -- small enough to deploy on
+# shinyapps.io's free tier, unlike the ~135 GB of source CONUS data.
 #
 # Usage:
 #   shiny::runApp(here::here('Trees/Canopy/Canopy_compare'))
@@ -12,48 +13,28 @@ library(terra)
 library(sf)
 library(tidyverse)
 
-source(here::here('Trees/Canopy/NLCD_helpers.R'))
+data_path = 'canopy_data.gpkg'
+
+noho  = read_sf(data_path, layer = 'noho_outline')
+wards = read_sf(data_path, layer = 'wards_precincts')
 
 # --- Layer discovery ---------------------------------------------------
 
-old_series_layers = function() {
-  files = list.files(
-    here::here('data/nlcd_tcc_CONUS_all'),
-    pattern = '^nlcd_tcc_conus_\\d{4}_v2021-4\\.tif$',
-    full.names = TRUE, recursive = TRUE)
-  tibble(series = '2011-2021 (v2021-4)',
-         version = 'v4',
-         year = str_extract(basename(files), '\\d{4}'),
-         path = files)
+discover_canopy_layers = function() {
+  tables = terra::describe(data_path, sds = TRUE)$var
+  tibble(year = str_extract(tables, '\\d{4}'),
+         path = paste0('GPKG:', data_path, ':', tables))
 }
 
-new_series_layers = function() {
-  files = list.files(
-    here::here('data/nlcd_tcc_CONUS_1985_2023_v2023-5_wgs84'),
-    pattern = '^nlcd_tcc_CONUS_\\d{4}_v2023-5_wgs84\\.zip$',
-    full.names = TRUE)
-  tibble(series = '1985-2023 (v2023-5, WGS84)',
-         version = 'v5',
-         year = str_extract(basename(files), '\\d{4}'),
-         path = files)
-}
+canopy_layers = discover_canopy_layers() |> arrange(year)
 
-canopy_layers = bind_rows(old_series_layers(), new_series_layers()) |>
-  arrange(series, year)
+default_from_path = canopy_layers$path[canopy_layers$year == '2000']
+default_to_path   = canopy_layers$path[canopy_layers$year == '2023']
 
-default_from_path = canopy_layers$path[canopy_layers$version == 'v5' & canopy_layers$year == '1985']
-default_to_path   = canopy_layers$path[canopy_layers$version == 'v5' & canopy_layers$year == '2023']
-
-# Named list of named vectors -> selectInput renders these as <optgroup>s,
-# so From/To each list both series with their years underneath. The (v4)/
-# (v5) suffix on each entry makes same-year picks from different series
-# easy to tell apart.
-layer_choices = split(canopy_layers, canopy_layers$series) |>
-  map(~ set_names(.x$path, paste0(.x$year, ' (', .x$version, ')')))
+layer_choices = set_names(canopy_layers$path, canopy_layers$year)
 
 layer_label = function(path) {
-  row = canopy_layers[canopy_layers$path == path, ]
-  paste0(row$year, ' (', row$version, ')')
+  canopy_layers$year[canopy_layers$path == path]
 }
 
 # --- Data reading / diff computation ------------------------------------
@@ -61,7 +42,7 @@ layer_label = function(path) {
 # 254 marks a non-processing area in the NLCD TCC data; treat as 0 canopy,
 # matching the convention used in the Tree_canopy_change reports.
 read_tcc_layer = function(path) {
-  layer = read_layer(path)
+  layer = rast(path)
   layer[layer == 254] = 0
   layer
 }
@@ -99,15 +80,25 @@ base_map = function() {
     # its own pane with a higher z-index keeps it on top regardless of
     # which base layer is active or when it was first selected.
     addMapPane('canopy_pane', zIndex = 450) |>
+    # Wards need their own pane above canopy_pane, otherwise they'd sit in
+    # the default overlayPane (zIndex 400) and the change raster would
+    # paint over their outlines.
+    addMapPane('wards_pane', zIndex = 460) |>
     setView(-72.667, 42.330, 12) |>
     addProviderTiles('CartoDB.Positron', group = 'Basic map') |>
     addTiles(group = 'OpenStreetMap') |>
     addProviderTiles('Esri.WorldImagery', group = 'Satellite') |>
+    addPolygons(data = wards |> st_transform(4326),
+                weight = 1, color = 'steelblue',
+                fill = FALSE, group = 'Wards & Precincts',
+                label = ~WardPrec,
+                labelOptions = labelOptions(direction = 'center', permanent = TRUE, textOnly = TRUE),
+                options = pathOptions(pane = 'wards_pane')) |>
     addPolygons(data = noho |> st_transform(4326),
                 weight = 1, fill = FALSE, color = 'grey') |>
     addLayersControl(
       baseGroups = c('Basic map', 'OpenStreetMap', 'Satellite'),
-      overlayGroups = 'Change',
+      overlayGroups = c('Change', 'Wards & Precincts'),
       options = layersControlOptions(collapsed = FALSE)) |>
     addLegend(pal = tc_colors_rev, values = seq(-100, 100, 20),
               labFormat = labelFormat(
@@ -139,37 +130,33 @@ ui = page_sidebar(
 
 server = function(input, output, session) {
 
-  # ignoreNULL/ignoreInit default to firing only on an actual button click,
-  # not on app load -- input$from_path/to_path aren't guaranteed to have
-  # synced from the client yet at load time, so triggering immediately can
-  # race ahead of them.
-  comparison = eventReactive(input$compare_btn, {
-    req(input$from_path, input$to_path)
+  compute_comparison = function(from_path, to_path) {
     withProgress(message = 'Reading and comparing layers...', {
       list(
-        diff  = compute_canopy_diff(input$from_path, input$to_path),
-        label = paste(layer_label(input$from_path), '→', layer_label(input$to_path))
+        diff  = compute_canopy_diff(from_path, to_path),
+        label = paste(layer_label(from_path), '→', layer_label(to_path))
       )
     })
+  }
+
+  # Seeded with the default From/To comparison so the map shows a result
+  # as soon as the app loads, rather than waiting for a first click.
+  comparison = reactiveVal(compute_comparison(default_from_path, default_to_path))
+
+  observeEvent(input$compare_btn, {
+    req(input$from_path, input$to_path)
+    comparison(compute_comparison(input$from_path, input$to_path))
   })
 
-  # Before the first click, show the base map/legend with no Change layer
-  # and a placeholder title, rather than an error.
-  safe_comparison = function() tryCatch(comparison(), error = function(e) NULL)
-
   output$map_title = renderText({
-    result = safe_comparison()
-    if (is.null(result)) 'Select two years and click Compare' else result$label
+    comparison()$label
   })
 
   output$map = renderLeaflet({
-    result = safe_comparison()
-    map = base_map()
-    if (!is.null(result)) {
-      map = map |> addRasterImage(result$diff, colors = tc_colors, group = 'Change',
-                                   options = gridOptions(pane = 'canopy_pane'))
-    }
-    map
+    result = comparison()
+    base_map() |>
+      addRasterImage(result$diff, colors = tc_colors, group = 'Change',
+                      options = gridOptions(pane = 'canopy_pane'))
   })
 }
 
