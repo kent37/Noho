@@ -92,10 +92,11 @@ for (pid in sort(unique(polygons$person_id))) {
         Year >= 2020 ~ '2020–2022',
         Year >= 2017 ~ '2017–2019'
       ),
-      Details = str_replace_all(name_label, '<br>', ', ')
+      Details = str_replace_all(name_label, '<br>', ', '),
+      Notes = ""
     ) |>
     arrange(desc(Period), Street, Num) |>
-    select(Address = Addr, Year, Period, Count = count, Location, Details)
+    select(Num, Street, Year, Period, Count = count, Location, Details, Notes)
 
   n_rows      = nrow(df)
   details_col = which(names(df) == 'Details')
@@ -110,9 +111,10 @@ for (pid in sort(unique(polygons$person_id))) {
     ) |>
     wb_set_col_widths(
       cols   = seq_len(ncol(df)),
-      widths = c(20, 6, 11, 7, 12, 44)
+      widths = c(6, 20, 7, 12, 7, 12, 44, 25)
     ) |>
-    wb_page_setup(orientation = 'portrait', fit_to_width = 1)
+    wb_page_setup(orientation = 'landscape', fit_to_width = 1) |>
+    wb_set_grid_lines(show = TRUE, print = TRUE)
 
   if (n_rows > 0) {
     wb = wb |> wb_add_cell_style(
